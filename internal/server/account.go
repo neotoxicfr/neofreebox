@@ -48,7 +48,7 @@ func (a *account) exists() bool {
 // set writes a new username and password. create refuses to overwrite an
 // existing account (first run); a password change passes create=false.
 func (a *account) set(username, password string, create bool) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
@@ -74,6 +74,9 @@ func (a *account) set(username, password string, create bool) error {
 	a.Username, a.Hash = username, hash
 	return nil
 }
+
+// bcryptCost is lowered by the tests, which create an account each.
+var bcryptCost = bcrypt.DefaultCost
 
 var errAccountExists = errors.New("account already exists")
 
