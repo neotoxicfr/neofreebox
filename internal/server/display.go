@@ -109,7 +109,7 @@ func (s *Server) display(w http.ResponseWriter, r *http.Request) {
 func (s *Server) saveDisplay(w http.ResponseWriter, r *http.Request) {
 	var cfg lcdConfig
 	if err := s.fetch(r.Context(), "lcd/config/", &cfg); err != nil {
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 		http.Redirect(w, r, "/display", http.StatusSeeOther)
 		return
 	}
@@ -159,7 +159,7 @@ func (s *Server) saveDisplay(w http.ResponseWriter, r *http.Request) {
 func (s *Server) ledstripPlanning(w http.ResponseWriter, r *http.Request) {
 	var plan map[string]any
 	if err := s.fetch(r.Context(), "ledstrip/planning/", &plan); err != nil {
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 		http.Redirect(w, r, "/display", http.StatusSeeOther)
 		return
 	}

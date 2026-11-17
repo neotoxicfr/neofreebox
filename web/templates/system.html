@@ -25,7 +25,7 @@
   <section class="card">
     <h2>Mise à jour</h2>
     {{if .UpdateErr}}<p class="muted">Le statut de mise à jour n'est pas disponible.</p>{{else}}
-    <p><span class="badge {{if or .Update.Busy .Update.Bad}}off{{else}}on{{end}}">{{.Update.Label}}</span></p>
+    <p><span class="badge{{if .Update.Bad}} off{{else if .Update.Busy}} warn{{else}} on{{end}}">{{.Update.Label}}</span></p>
     {{if .Update.Busy}}
     <p class="muted">{{.Update.UpgradeState.OldVersion}} → {{.Update.UpgradeState.NewVersion}}{{if .Update.UpgradeState.Percent}} ({{.Update.UpgradeState.Percent}} %){{end}}</p>
     {{end}}

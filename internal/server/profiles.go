@@ -188,9 +188,9 @@ func (s *Server) profiles(w http.ResponseWriter, r *http.Request) {
 		v := profileView{profileInfo: p}
 		base := "network_control/" + strconv.Itoa(p.ID) + "/"
 		if e := s.fetch(ctx, base, &v.NC); e != nil {
-			v.Err = e.Error()
+			v.Err = humanError(e)
 		} else if e := s.fetch(ctx, base+"rules/", &v.Rules); e != nil {
-			v.Err = e.Error()
+			v.Err = humanError(e)
 		}
 		sort.Slice(v.Rules, func(i, j int) bool { return v.Rules[i].StartTime < v.Rules[j].StartTime })
 		attached := map[string]bool{}
@@ -243,7 +243,7 @@ func (s *Server) renameProfile(w http.ResponseWriter, r *http.Request) {
 	// Keep the current icon: the box replaces the whole object.
 	var cur profileInfo
 	if err := s.fetch(r.Context(), "profile/"+id+"/", &cur); err != nil {
-		refuse(w, r, err.Error())
+		refuse(w, r, humanError(err))
 		return
 	}
 	s.change(w, r, http.MethodPut, "profile/"+id+"/", map[string]string{"name": name, "url": firstNonEmpty(cur.Icon, defaultProfileIcon)}, "Profil renommé.", "/profiles")
@@ -272,7 +272,7 @@ func (s *Server) putControl(w http.ResponseWriter, r *http.Request, edit func(nc
 	path := "network_control/" + id + "/"
 	var nc map[string]any
 	if err := s.fetch(r.Context(), path, &nc); err != nil {
-		refuse(w, r, err.Error())
+		refuse(w, r, humanError(err))
 		return
 	}
 	delete(nc, "hosts") // read-only, derived from macs
@@ -405,7 +405,7 @@ func (s *Server) toggleRule(w http.ResponseWriter, r *http.Request) {
 	path := "network_control/" + id + "/rules/" + strconv.Itoa(rule) + "/"
 	var cur map[string]any
 	if err := s.fetch(r.Context(), path, &cur); err != nil {
-		refuse(w, r, err.Error())
+		refuse(w, r, humanError(err))
 		return
 	}
 	enable := formBool(r, "enable")
@@ -422,6 +422,9 @@ func (s *Server) deleteRule(w http.ResponseWriter, r *http.Request) {
 	rule, err2 := strconv.Atoi(r.PathValue("rule"))
 	if err != nil || err2 != nil {
 		refuse(w, r, "Identifiant invalide.")
+		return
+	}
+	if !confirmed(w, r, "/profiles") {
 		return
 	}
 	s.change(w, r, http.MethodDelete, "network_control/"+id+"/rules/"+strconv.Itoa(rule)+"/", nil, "Règle supprimée.", "/profiles")

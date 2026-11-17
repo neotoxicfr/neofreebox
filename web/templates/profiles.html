@@ -6,7 +6,7 @@
 <div class="grid">
   <section class="card">
     <h2>Mode par défaut</h2>
-    <p>Appareils sans profil : <span class="badge {{if eq .Default "allowed"}}on{{else}}off{{end}}">{{.DefaultLabel}}</span></p>
+    <p>Appareils sans profil : <span class="badge {{if eq .Default "allowed"}}on{{else}}warn{{end}}">{{.DefaultLabel}}</span></p>
     <form method="post" action="/profiles/default" class="stack">
       <label>Nouveau mode
         <select name="mode">
@@ -30,8 +30,8 @@
 <section class="card section">
   <h2>{{$p.Name}}
     {{if $p.Err}}<span class="badge off">erreur</span>
-    {{else if $p.Paused}}<span class="badge off">accès coupé</span>
-    {{else if $p.Blocked}}<span class="badge off">{{$p.Mode}}</span>
+    {{else if $p.Paused}}<span class="badge warn">accès coupé</span>
+    {{else if $p.Blocked}}<span class="badge warn">{{$p.Mode}}</span>
     {{else}}<span class="badge on">{{$p.Mode}}</span>{{end}}
   </h2>
   {{if $p.Err}}<p class="error" role="alert">{{$p.Err}}</p>{{else}}
@@ -64,13 +64,13 @@
   {{if $p.Devices}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>MAC</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Adresse MAC</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range $p.Devices}}
     <tr>
       <td>{{or .Name "Appareil inconnu"}}</td>
       <td class="mono" data-label="MAC">{{.MAC}}</td>
-      <td><form method="post" action="/profiles/{{$p.ID}}/detach"><input type="hidden" name="mac" value="{{.MAC}}"><button class="ghost small">Détacher</button></form></td>
+      <td><form method="post" action="/profiles/{{$p.ID}}/detach"><input type="hidden" name="mac" value="{{.MAC}}"><button class="ghost small">Détacher<span class="sr-only"> {{or .Name .MAC}}</span></button></form></td>
     </tr>
     {{end}}
     </tbody>
@@ -92,21 +92,21 @@
   {{if $p.Rules}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Règle</th><th>Jours</th><th>Horaire</th><th>Mode</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Règle</th><th scope="col">Jours</th><th scope="col">Horaire</th><th scope="col">Mode</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range $p.Rules}}
     <tr>
-      <td><span class="badge {{if .Enabled}}on{{else}}off{{end}}">{{if .Enabled}}active{{else}}inactive{{end}}</span> {{.Name}}</td>
+      <td><span class="badge{{if .Enabled}} on{{end}}">{{if .Enabled}}activée{{else}}désactivée{{end}}</span> {{.Name}}</td>
       <td data-label="Jours">{{.Days}}</td>
       <td class="mono" data-label="Horaire">{{.Hours}}</td>
       <td data-label="Mode">{{.ModeLabel}}</td>
       <td>
         <div class="actions">
           {{if .Enabled}}
-          <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle"><button class="ghost small">Désactiver</button></form>
+          <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle"><button class="ghost small">Désactiver<span class="sr-only"> la règle {{.Name}}</span></button></form>
           {{else}}
           <details class="inline">
-            <summary class="ghost-btn">Activer</summary>
+            <summary class="ghost-btn">Activer<span class="sr-only"> la règle {{.Name}}</span></summary>
             <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle" class="stack">
               <input type="hidden" name="enable" value="1">
               <label class="check"><input type="checkbox" name="confirm" value="1"{{if ne .Mode "allowed"}} required{{end}}> Je comprends que cette règle peut couper l'accès du profil.</label>
@@ -114,7 +114,13 @@
             </form>
           </details>
           {{end}}
-          <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/delete"><button class="ghost small">Supprimer</button></form>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la règle {{.Name}}</span></summary>
+            <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la règle « {{.Name}} » sera supprimée.</label>
+              <button class="danger small">Supprimer définitivement</button>
+            </form>
+          </details>
         </div>
       </td>
     </tr>
@@ -153,17 +159,17 @@
   <h3>Gérer le profil</h3>
   <div class="actions">
     <details class="inline">
-      <summary class="ghost-btn">Renommer</summary>
+      <summary class="ghost-btn">Renommer<span class="sr-only"> le profil {{$p.Name}}</span></summary>
       <form method="post" action="/profiles/{{$p.ID}}/rename" class="row">
         <label class="grow">Nouveau nom<input name="name" value="{{$p.Name}}" required maxlength="64"></label>
         <button class="small">Enregistrer</button>
       </form>
     </details>
     <details class="inline">
-      <summary class="ghost-btn danger">Supprimer</summary>
+      <summary class="ghost-btn danger">Supprimer<span class="sr-only"> le profil {{$p.Name}}</span></summary>
       <form method="post" action="/profiles/{{$p.ID}}/delete" class="stack">
         <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le profil « {{$p.Name}} » et son planning seront supprimés, et que ses appareils suivront le mode par défaut.</label>
-        <div><button class="danger small">Supprimer le profil</button></div>
+        <div><button class="danger small">Supprimer définitivement</button></div>
       </form>
     </details>
   </div>
