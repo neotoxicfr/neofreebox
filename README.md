@@ -38,6 +38,7 @@ Network comes first, then the rest of Freebox OS:
 - [x] App shell: login, box status, container image
 - [ ] Live events from the box (WebSocket)
 - [ ] Network: devices, DHCP, port forwarding, DMZ, UPnP, Wi-Fi, IPv6, DNS, remote access
+- [ ] JSON API and MCP server, to drive the box from scripts or an AI assistant
 - [ ] WireGuard VPN server: peers, config files and QR codes
 - [ ] Monitoring: live bandwidth, history, events, fibre line
 - [ ] System: reboot, updates, LEDs, parental control, Freeplugs
