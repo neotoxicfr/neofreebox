@@ -38,7 +38,7 @@ func statusBody(t *testing.T, box Box) string {
 
 func TestStatusBriefAndLabels(t *testing.T) {
 	body := statusBody(t, statusBox{})
-	for _, want := range []string{"En bref", "2 sur 3 vus par la box", "Appels non lus", "Fibre (FTTH)", "Ventilateur 1", `class="dot up" aria-hidden="true"`} {
+	for _, want := range []string{"En bref", `<span class="stop-big">2</span>`, "connectés sur 3 vus par la box", "appels non lus", "Fibre (FTTH)", "Ventilateur 1", `class="dot up" aria-hidden="true"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page lacks %q", want)
 		}
@@ -50,7 +50,7 @@ func TestStatusBriefAndLabels(t *testing.T) {
 
 func TestStatusBriefIsOptional(t *testing.T) {
 	body := statusBody(t, fakeBox{})
-	if !strings.Contains(body, "En bref") || strings.Contains(body, "Appels non lus") {
+	if !strings.Contains(body, "En bref") || strings.Contains(body, "appels non lus") {
 		t.Error("the card must show without the optional lines")
 	}
 }

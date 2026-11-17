@@ -1,6 +1,6 @@
 {{define "title"}}Connexion · neofreebox{{end}}
 {{define "content"}}
-<img class="logo" src="/static/icon.svg" alt="" width="48" height="48">
+<span class="logo">{{template "roundel"}}</span>
 <h1>Connexion</h1>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
 <form method="post" action="/login" class="card stack">

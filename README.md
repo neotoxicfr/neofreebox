@@ -15,7 +15,20 @@ dans une petite application que tu fais tourner sur ton propre serveur.
 
 </div>
 
-<!-- captures à venir, avec données de démonstration -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/accueil-sombre.png">
+    <img src="docs/screenshots/accueil-clair.png" alt="Accueil de neofreebox : le plan de ligne d'internet jusqu'aux appareils, la liste des lignes et la fiche de la box" width="900">
+  </picture>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/appareils.png" alt="Page Appareils, ligne Réseau" width="290">
+  <img src="docs/screenshots/wifi.png" alt="Page Réseaux Wi-Fi en thème sombre" width="290">
+  <img src="docs/screenshots/telephone.png" alt="Accueil sur téléphone, avec la barre des lignes en bas" width="120">
+</p>
+
+<p align="center"><sub>Captures faites en mode démo (<code>NEOFREEBOX_DEMO=true</code>) : toutes les données sont fictives.</sub></p>
 
 > [!WARNING]
 > **Version préliminaire.** Toutes les sections de Freebox OS sont couvertes,

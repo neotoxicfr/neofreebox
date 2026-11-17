@@ -83,14 +83,14 @@ type chart struct {
 const (
 	chartW, chartH = 400, 200
 	maxPoints      = 240
-	colorUp        = "#e5383b"
+	colorUp        = "#c2610c"
 	colorDown      = "#2a7fd0"
 )
 
 // palette and dashes: every colour has at least 3:1 against the white and the
 // dark card backgrounds, and the lines also differ by their dash pattern.
 var (
-	palette = []string{"#e5383b", "#2a7fd0", "#b26a00", "#178a3a", "#8b5cf6", "#ec4899"}
+	palette = []string{"#0e8a8a", "#2a7fd0", "#b26a00", "#178a3a", "#8b5cf6", "#ec4899"}
 	dashes  = []string{"", "7 3", "2 3", "9 3 2 3", "12 4", "1 4"}
 )
 
