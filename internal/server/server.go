@@ -45,6 +45,25 @@ type Server struct {
 	// setupCode must be typed on the first-run form: it is only printed in
 	// the logs, so reaching the page is not enough to claim the box.
 	setupCode string
+	// demo shows the "fictional data" banner (see EnableDemo).
+	demo bool
+}
+
+// Demo account, created by EnableDemo and documented in the README.
+const (
+	DemoUser     = "demo"
+	DemoPassword = "demo-neofreebox"
+)
+
+// EnableDemo marks the server as a demo: a banner says the data is fictional,
+// and the demo account is created on first run so the app opens directly.
+func (s *Server) EnableDemo() error {
+	s.demo = true
+	if s.account.exists() {
+		return nil
+	}
+	s.setupCode = ""
+	return s.account.set(DemoUser, DemoPassword, true)
 }
 
 // New loads the account from dataDir and parses the templates.
@@ -173,6 +192,7 @@ func (s *Server) render(w http.ResponseWriter, status int, page string, data map
 		data = map[string]any{}
 	}
 	data["Menu"] = menu()
+	data["Demo"] = s.demo
 	var buf bytes.Buffer
 	if err := s.pages[page].Execute(&buf, data); err != nil {
 		s.log.Error("render", "page", page, "err", err)

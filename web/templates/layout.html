@@ -33,6 +33,7 @@
 </aside>
 {{end}}
 <main id="main" tabindex="-1"{{if not .Nav}} class="narrow"{{end}}>
+{{if .Demo}}<p class="demo" role="note">Démo : données fictives</p>{{end}}
 {{with .Flash}}<p class="{{if .Ok}}ok{{else}}error{{end}}" role="{{if .Ok}}status{{else}}alert{{end}}">{{.Text}}</p>{{end}}
 {{block "content" .}}{{end}}
 </main>

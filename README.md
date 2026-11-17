@@ -119,6 +119,10 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
 4. **Créer le compte** : ouvre l'application et saisis le code d'installation affiché dans le
    journal du conteneur (`docker logs neofreebox`).
 
+**Essayer sans box** : `docker run --rm -p 8080:8080 -e NEOFREEBOX_DEMO=true ghcr.io/neotoxicfr/neofreebox:latest`,
+puis ouvre <http://localhost:8080> (compte `demo` / `demo-neofreebox`). Les données sont
+fictives, aucune box n'est contactée et les modifications sont sans effet.
+
 ### Variables d'environnement
 
 | Variable | Défaut | Rôle |
