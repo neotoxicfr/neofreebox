@@ -145,8 +145,9 @@ fictives, aucune box n'est contactée et les modifications sont sans effet.
 
 **Versions de l'image** : `latest` et `X.Y.Z` (par exemple `0.1.0`) suivent les
 [releases](https://github.com/neotoxicfr/neofreebox/releases) ; `dev` suit la branche de développement.
-Pour mettre à jour : `docker compose pull && docker compose up -d`. Le compte et les jetons sont
-conservés dans le volume de données.
+Pour mettre à jour : `docker compose pull && docker compose up -d`, qui suffit avec `latest` ou
+`dev` ; si ton compose fixe une version (`0.1.0`), change d'abord ce tag. Le compte et les jetons
+sont conservés dans le volume de données.
 
 ### Variables d'environnement
 
