@@ -170,7 +170,7 @@ func (t dlTask) Pct() int {
 }
 
 // Dir is the download folder, decoded.
-func (t dlTask) Dir() string { return decodePath(t.DownloadDir) }
+func (t dlTask) Dir() string { return dlDecodePath(t.DownloadDir) }
 
 func (t dlTask) Active() bool {
 	switch t.Status {
@@ -192,7 +192,7 @@ func (t dlTask) Ratio() string {
 	return strings.Replace(strconv.FormatFloat(float64(t.TxBytes)/float64(t.RxBytes), 'f', 2, 64), ".", ",", 1)
 }
 
-func decodePath(s string) string {
+func dlDecodePath(s string) string {
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
 		return s
@@ -346,15 +346,15 @@ type dlConfig struct {
 	} `json:"feed"`
 }
 
-func (c dlConfig) Dir() string       { return decodePath(c.DownloadDir) }
-func (c dlConfig) WatchPath() string { return decodePath(c.WatchDir) }
+func (c dlConfig) Dir() string       { return dlDecodePath(c.DownloadDir) }
+func (c dlConfig) WatchPath() string { return dlDecodePath(c.WatchDir) }
 
 // Planning is the weekly schedule as 7 days (Monday first) of 24 slots.
-func (c dlConfig) Planning() []planDay {
+func (c dlConfig) Planning() []dlPlanDay {
 	days := []string{"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"}
-	out := make([]planDay, 0, 7)
+	out := make([]dlPlanDay, 0, 7)
 	for d, name := range days {
-		day := planDay{Name: name}
+		day := dlPlanDay{Name: name}
 		for h := 0; h < 24; h++ {
 			i := d*24 + h
 			slot := "normal"
@@ -368,7 +368,7 @@ func (c dlConfig) Planning() []planDay {
 	return out
 }
 
-type planDay struct {
+type dlPlanDay struct {
 	Name  string
 	Slots []string
 }
@@ -549,7 +549,7 @@ func (s *Server) downloadStatus(w http.ResponseWriter, r *http.Request) {
 		bounce(w, r, "/downloads", "Action inconnue.")
 		return
 	}
-	s.change(w, r, http.MethodPut, "downloads/"+id, map[string]string{"status": st}, msg, backTo(r, id))
+	s.change(w, r, http.MethodPut, "downloads/"+id, map[string]string{"status": st}, msg, dlBackTo(r, id))
 }
 
 func (s *Server) downloadPriority(w http.ResponseWriter, r *http.Request) {
@@ -562,11 +562,11 @@ func (s *Server) downloadPriority(w http.ResponseWriter, r *http.Request) {
 		bounce(w, r, "/downloads", "Priorité inconnue.")
 		return
 	}
-	s.change(w, r, http.MethodPut, "downloads/"+id, map[string]string{"io_priority": p}, "Priorité modifiée.", backTo(r, id))
+	s.change(w, r, http.MethodPut, "downloads/"+id, map[string]string{"io_priority": p}, "Priorité modifiée.", dlBackTo(r, id))
 }
 
-// backTo returns to the detail page when the form came from it (back=detail).
-func backTo(r *http.Request, id string) string {
+// dlBackTo returns to the detail page when the form came from it (back=detail).
+func dlBackTo(r *http.Request, id string) string {
 	if r.PostFormValue("back") == "detail" {
 		return "/downloads/" + id
 	}
