@@ -6,8 +6,11 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
@@ -62,8 +65,7 @@ type tick struct {
 }
 
 type chartSeries struct {
-	Name, Color, Points, Last, Max string
-	LegendX                        float64
+	Name, Color, Dash, Points, Last, Max string
 }
 
 type chart struct {
@@ -82,10 +84,15 @@ const (
 	chartW, chartH = 400, 200
 	maxPoints      = 240
 	colorUp        = "#e5383b"
-	colorDown      = "#3b82f6"
+	colorDown      = "#2a7fd0"
 )
 
-var palette = []string{"#e5383b", "#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899"}
+// palette and dashes: every colour has at least 3:1 against the white and the
+// dark card backgrounds, and the lines also differ by their dash pattern.
+var (
+	palette = []string{"#e5383b", "#2a7fd0", "#b26a00", "#178a3a", "#8b5cf6", "#ec4899"}
+	dashes  = []string{"", "7 3", "2 3", "9 3 2 3", "12 4", "1 4"}
+)
 
 func (s *Server) graphs(w http.ResponseWriter, r *http.Request) {
 	rng := graphRanges[1]
@@ -97,16 +104,27 @@ func (s *Server) graphs(w http.ResponseWriter, r *http.Request) {
 	end := time.Now().Unix()
 	start := end - int64(rng.Span/time.Second)
 
+	dbs := []string{"net", "temp", "switch"}
+	results := make([]rrdResult, len(dbs))
+	failed := make([]error, len(dbs))
+	var g errgroup.Group
+	for i, db := range dbs {
+		g.Go(func() error {
+			body := map[string]any{"db": db, "date_start": start, "date_end": end}
+			failed[i] = s.boxDo(r, http.MethodPost, "rrd/", body, &results[i])
+			return nil
+		})
+	}
+	_ = g.Wait()
+
 	var charts []chart
 	var errs []string
-	for _, db := range []string{"net", "temp", "switch"} {
-		var res rrdResult
-		body := map[string]any{"db": db, "date_start": start, "date_end": end}
-		if err := s.boxDo(r, http.MethodPost, "rrd/", body, &res); err != nil {
-			errs = append(errs, fmt.Sprintf("%s : %v", dbLabel(db), err))
+	for i, db := range dbs {
+		if failed[i] != nil {
+			errs = append(errs, fmt.Sprintf("%s : %v", dbLabel(db), failed[i]))
 			continue
 		}
-		pts := downsample(res.Data, maxPoints)
+		pts := downsample(results[i].Data, maxPoints)
 		switch db {
 		case "net":
 			charts = append(charts, makeChart("Débit", pts, start, end, rng.Day, 8, bits64,
@@ -185,7 +203,7 @@ func downsample(in []rrdPoint, n int) []rrdPoint {
 func splitTemp(pts []rrdPoint) (temps, fans []seriesDef) {
 	names := map[string]string{"cpum": "CPU M", "cpub": "CPU B", "sw": "Switch", "hdd": "Disque",
 		"temp_cpub": "CPU B", "temp_cpum": "CPU M", "temp_sw": "Switch", "temp_hdd": "Disque",
-		"temp_t1": "Capteur 1", "temp_t2": "Capteur 2", "temp_t3": "Capteur 3"}
+		"temp_t1": "Température 1", "temp_t2": "Température 2", "temp_t3": "Température 3"}
 	for _, k := range fieldKeys(pts) {
 		name := names[k]
 		if name == "" {
@@ -197,8 +215,13 @@ func splitTemp(pts []rrdPoint) (temps, fans []seriesDef) {
 			temps = append(temps, seriesDef{k, name, palette[len(temps)%len(palette)]})
 		}
 	}
+	// The box numbers its fans from 0 in the RRD and from 1 on the State page.
 	for i := range fans {
-		fans[i].Name = "Ventilateur " + strings.Trim(strings.NewReplacer("fan", "", "_speed", "").Replace(fans[i].Key), "_")
+		n := strings.Trim(strings.NewReplacer("fan", "", "_speed", "").Replace(fans[i].Key), "_")
+		if v, err := strconv.Atoi(n); err == nil {
+			n = strconv.Itoa(v + 1)
+		}
+		fans[i].Name = "Ventilateur " + n
 	}
 	return temps, fans
 }
@@ -249,7 +272,7 @@ func niceMax(v float64) float64 {
 // makeChart draws the series as polylines. mult converts the RRD value to
 // the displayed unit (byte/s to bit/s: 8).
 func makeChart(title string, pts []rrdPoint, from, to int64, days bool, mult float64, format func(float64) string, defs []seriesDef) chart {
-	c := chart{Title: title, W: chartW, H: chartH, Left: 64, Right: chartW - 8, Top: 28, Bottom: 22}
+	c := chart{Title: title, W: chartW, H: chartH, Left: 84, Right: chartW - 24, Top: 10, Bottom: 26}
 	pw, ph := c.Right-c.Left, float64(c.H)-c.Top-c.Bottom
 	maxV := 0.0
 	for _, p := range pts {
@@ -280,8 +303,8 @@ func makeChart(title string, pts []rrdPoint, from, to int64, days bool, mult flo
 		if !seen {
 			continue
 		}
-		c.Series = append(c.Series, chartSeries{Name: d.Name, Color: d.Color, Points: strings.Join(poly, " "),
-			Last: format(last), Max: format(peak), LegendX: c.Left + float64(i)*105})
+		c.Series = append(c.Series, chartSeries{Name: d.Name, Color: d.Color, Dash: dashes[i%len(dashes)], Points: strings.Join(poly, " "),
+			Last: format(last), Max: format(peak)})
 	}
 	c.Empty = len(c.Series) == 0
 	for i := 0; i <= 4; i++ {

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
 
 type diagnosticsBox struct {
@@ -22,6 +24,15 @@ func (b *diagnosticsBox) Get(_ context.Context, _ string, out any) error {
 func (b *diagnosticsBox) Do(_ context.Context, method, path string, _, _ any) error {
 	b.writes = append(b.writes, method+" "+path)
 	return nil
+}
+
+func TestNotifTargetWritesAreDangerous(t *testing.T) {
+	for _, name := range []string{"notif_target_add", "notif_target_update"} {
+		op, ok := ops.Get(name)
+		if !ok || !op.Dangerous {
+			t.Errorf("%s must be dangerous (alerts go to an arbitrary URL)", name)
+		}
+	}
 }
 
 func TestDiagnosticsPageAndDelete(t *testing.T) {

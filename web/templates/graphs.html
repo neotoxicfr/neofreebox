@@ -4,7 +4,7 @@
   <h2>{{.Title}}</h2>
   {{if .Empty}}<p class="empty">Pas de données sur cette période.</p>{{else}}
   {{$c := .}}
-  <svg viewBox="0 0 {{.W}} {{.H}}" width="100%" role="img" aria-label="{{.Desc}}" font-family="sans-serif" font-size="11" fill="currentColor">
+  <svg viewBox="0 0 {{.W}} {{.H}}" width="100%" role="img" aria-label="{{.Desc}}" font-family="sans-serif" font-size="14" fill="currentColor">
     {{range .YTicks}}
     <line x1="{{$c.Left}}" x2="{{$c.Right}}" y1="{{.Pos}}" y2="{{.Pos}}" stroke="currentColor" stroke-opacity="0.2"/>
     <text x="{{$c.Left}}" y="{{.Pos}}" dx="-6" dy="4" text-anchor="end">{{.Label}}</text>
@@ -13,13 +13,11 @@
     <text x="{{.Pos}}" y="{{$c.H}}" dy="-6" text-anchor="middle">{{.Label}}</text>
     {{end}}
     {{range .Series}}
-    <polyline points="{{.Points}}" fill="none" stroke="{{.Color}}" stroke-width="1.6" stroke-linejoin="round"/>
-    <rect x="{{.LegendX}}" y="6" width="16" height="4" fill="{{.Color}}"/>
-    <text x="{{.LegendX}}" y="14" dx="22">{{.Name}}</text>
+    <polyline points="{{.Points}}" fill="none" stroke="{{.Color}}" stroke-width="2" stroke-linejoin="round"{{if .Dash}} stroke-dasharray="{{.Dash}}"{{end}}/>
     {{end}}
   </svg>
   <dl>
-    {{range .Series}}<dt>{{.Name}}</dt><dd>dernière valeur {{.Last}}, maximum {{.Max}}</dd>{{end}}
+    {{range .Series}}<dt><svg width="28" height="10" aria-hidden="true"><line x1="0" x2="28" y1="5" y2="5" stroke="{{.Color}}" stroke-width="2"{{if .Dash}} stroke-dasharray="{{.Dash}}"{{end}}/></svg> {{.Name}}</dt><dd>dernière valeur {{.Last}}, maximum {{.Max}}</dd>{{end}}
   </dl>
   {{end}}
 </section>

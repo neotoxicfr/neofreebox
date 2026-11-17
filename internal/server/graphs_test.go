@@ -51,7 +51,7 @@ func TestGraphsPage(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("%s: %d", rng, resp.StatusCode)
 		}
-		for _, want := range []string{"<polyline", "Descendant", "Montant", "Températures", "CPU B", "Ventilateur", "Switch, port 2", "10.0 Mb/s", "#e5383b"} {
+		for _, want := range []string{"<polyline", "Descendant", "Montant", "Températures", "CPU B", "Ventilateur 1", "Température 1", "Switch, port 2", "10.0 Mb/s", "#e5383b"} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("%s: %q missing\n%s", rng, want, body)
 			}

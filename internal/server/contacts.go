@@ -298,6 +298,9 @@ func (s *Server) deleteRelated(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if !confirmed(w, r, "/contacts") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, kind.Singular+"/"+rid+"/", nil, "Retiré du contact.", "/contacts")
 }
 

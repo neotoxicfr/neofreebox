@@ -82,6 +82,12 @@ func (c callEntry) Who() string {
 	return c.Number
 }
 
+// ShowNumber tells whether the number adds something to Who: not when the
+// name is only the number written differently ("01 02" vs "0102").
+func (c callEntry) ShowNumber() bool {
+	return c.Name != "" && c.Number != "" && digits(c.Name) != digits(c.Number)
+}
+
 type voicemail struct {
 	ID          string `json:"id"`
 	CountryCode any    `json:"country_code"` // the box sends a string or a number
@@ -90,6 +96,9 @@ type voicemail struct {
 	Duration    int64  `json:"duration"`
 	Read        bool   `json:"read"`
 }
+
+// callsLimit is the number of calls shown unless ?all=1 is given.
+const callsLimit = 100
 
 func (s *Server) calls(w http.ResponseWriter, r *http.Request) {
 	var log []callEntry
@@ -118,7 +127,11 @@ func (s *Server) calls(w http.ResponseWriter, r *http.Request) {
 			unreadVM++
 		}
 	}
-	s.show(w, r, "calls", map[string]any{"Calls": log, "Unread": unread, "Voicemails": boxes, "UnreadVM": unreadVM, "Phone": acct.PhoneNumber}, err)
+	total := len(log)
+	if total > callsLimit && r.URL.Query().Get("all") != "1" {
+		log = log[:callsLimit]
+	}
+	s.show(w, r, "calls", map[string]any{"Calls": log, "TotalCalls": total, "Truncated": total > len(log), "Unread": unread, "Voicemails": boxes, "UnreadVM": unreadVM, "Phone": acct.PhoneNumber}, err)
 }
 
 func (s *Server) callsReadAll(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +150,9 @@ func (s *Server) callRead(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) callDelete(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/calls") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "call/log/"+url.PathEscape(r.PathValue("id"))+"/", nil, "Appel supprimé.", "/calls")
 }
 
