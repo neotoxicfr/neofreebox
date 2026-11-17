@@ -30,7 +30,7 @@ func init() {
 		ops.Op{Name: "wifi_guest_key_get", Description: "Get one guest custom key, key included.",
 			Path: "wifi/custom_key/{id}", Params: []ops.Param{keyID}},
 		ops.Op{Name: "wifi_guest_key_add", Description: "Create a guest custom key. access_type full gives the guest access to your local network, net_only isolates them on the internet only.",
-			Method: http.MethodPost, Path: "wifi/custom_key/", Body: true,
+			Method: http.MethodPost, Path: "wifi/custom_key/", Body: true, Dangerous: true,
 			BodyHelp: `{"description": "friends", "key": "at least 8 characters", "max_use_count": 10, "duration": 86400, "access_type": "net_only"} (max_use_count 0 = unlimited)`},
 		ops.Op{Name: "wifi_guest_key_delete", Description: "Delete a guest custom key. The stations connected with it are disconnected.",
 			Method: http.MethodDelete, Path: "wifi/custom_key/{id}", Params: []ops.Param{keyID}, Dangerous: true},

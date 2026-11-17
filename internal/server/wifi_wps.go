@@ -61,8 +61,8 @@ func (s wifiWPSSession) ResultLabel() string {
 
 // wifiWPSNet is a network that may take a WPS session.
 type wifiWPSNet struct {
-	BSSID, SSID, AP, Why string
-	Ready                bool
+	BSSID, SSID, Band, Why string
+	Ready                  bool
 }
 
 func (s *Server) wifiWPS(w http.ResponseWriter, r *http.Request) {
@@ -79,13 +79,13 @@ func (s *Server) wifiWPS(w http.ResponseWriter, r *http.Request) {
 	var aps []wifiAP
 	s.soft(ctx, "wifi/bss/", &bsss)
 	s.soft(ctx, "wifi/ap/", &aps)
-	names := map[int]string{}
+	bands := map[int]string{}
 	for _, a := range aps {
-		names[a.ID] = a.Name
+		bands[a.ID] = a.Config.Band
 	}
 	var nets []wifiWPSNet
 	for _, b := range bsss {
-		n := wifiWPSNet{BSSID: b.ID, SSID: b.Config.SSID, AP: names[b.PhyID], Ready: true}
+		n := wifiWPSNet{BSSID: b.ID, SSID: b.Config.SSID, Band: bands[b.PhyID], Ready: true}
 		switch {
 		case !b.Config.WPS:
 			n.Ready, n.Why = false, "WPS désactivé"
@@ -144,5 +144,8 @@ func (s *Server) wifiWPSStop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) wifiWPSClear(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/wifi-wps") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "wifi/wps/sessions/", nil, "Historique WPS effacé.", "/wifi-wps")
 }

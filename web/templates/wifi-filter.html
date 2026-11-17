@@ -1,11 +1,12 @@
 {{define "title"}}Filtre MAC · neofreebox{{end}}
 {{define "content"}}
 <h1>Filtre MAC</h1>
+<p class="muted">Autorise ou refuse des appareils d'après l'adresse MAC de leur carte réseau (l'identifiant matériel d'un appareil).</p>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 <div class="grid">
   <section class="card">
     <h2>Mode</h2>
-    <p class="big"><span class="badge {{if .Active}}on{{else}}off{{end}}">{{.Cfg.FilterLabel}}</span></p>
+    <p class="big"><span class="badge{{if .Active}} on{{end}}">{{.Cfg.FilterLabel}}</span></p>
     <form method="post" action="/wifi-filter/state" class="stack">
       <label>Changer le mode
         <select name="mac_filter_state">
@@ -38,18 +39,18 @@
   <h2>Adresses</h2>
   {{if .Entries}}
   <table class="stack-sm">
-    <thead><tr><th>MAC</th><th>Liste</th><th>Appareil</th><th>Commentaire</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Adresse MAC</th><th scope="col">Liste</th><th scope="col">Appareil</th><th scope="col">Commentaire</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Entries}}
     <tr>
       <td class="mono">{{.MAC}}</td>
-      <td data-label="Liste"><span class="badge {{if .Allowed}}on{{else}}off{{end}}">{{if .Allowed}}blanche{{else}}noire{{end}}</span></td>
+      <td data-label="Liste"><span class="badge{{if .Allowed}} on{{end}}">{{if .Allowed}}blanche{{else}}noire{{end}}</span></td>
       <td data-label="Appareil">{{if ne .Hostname .MAC}}{{.Hostname}}{{end}}</td>
       <td data-label="Commentaire">{{.Comment}}</td>
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Modifier</summary>
+            <summary class="ghost-btn">Modifier<span class="sr-only"> {{.MAC}}</span></summary>
             <form method="post" action="/wifi-filter/entries/{{.ID}}" class="stack">
               <label>Liste
                 <select name="type"><option value="whitelist"{{if .Allowed}} selected{{end}}>Blanche</option><option value="blacklist"{{if not .Allowed}} selected{{end}}>Noire</option></select>
@@ -60,10 +61,10 @@
             </form>
           </details>
           <details class="inline">
-            <summary class="ghost-btn">Supprimer</summary>
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.MAC}}</span></summary>
             <form method="post" action="/wifi-filter/entries/{{.ID}}/delete" class="stack">
-              {{if $.Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif et peut changer qui se connecte.</label>{{end}}
-              <button class="small danger">Supprimer</button>
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette adresse sera retirée du filtre{{if $.Active}}, qui est actif et peut changer qui se connecte{{end}}.</label>
+              <button class="small danger">Supprimer définitivement</button>
             </form>
           </details>
         </div>
@@ -72,6 +73,7 @@
     {{end}}
     </tbody>
   </table>
+  {{if .More}}<p><a href="/wifi-filter?all=1">Tout afficher ({{.More}})</a></p>{{end}}
   {{else}}<p class="empty">Aucune adresse dans le filtre.</p>{{end}}
 </section>
 {{end}}

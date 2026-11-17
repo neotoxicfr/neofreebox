@@ -1,30 +1,31 @@
-{{define "title"}}Voisinage et stations · neofreebox{{end}}
+{{define "title"}}Voisinage et appareils · neofreebox{{end}}
 {{define "content"}}
-<h1>Voisinage et stations</h1>
+<h1>Voisinage et appareils connectés</h1>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else if not .APs}}<p class="empty">Aucune radio.</p>{{else}}
 <nav class="row" aria-label="Radio">
-  {{range .APs}}<a class="ghost-btn" href="/wifi-radar?ap={{.ID}}"{{if eq $.Sel.ID .ID}} aria-current="page"{{end}}>{{.Name}}</a>{{end}}
+  {{range .APs}}<a class="ghost-btn" href="/wifi-radar?ap={{.ID}}"{{if eq $.Sel.ID .ID}} aria-current="page"{{end}}>{{band .Config.Band}}</a>{{end}}
 </nav>
 
 <section class="card table-wrap section">
-  <h2>Appareils connectés ({{.Sel.Name}})</h2>
+  <h2>Appareils connectés ({{band .Sel.Config.Band}})</h2>
   {{if .Stations}}
   <table class="stack-sm">
-    <thead><tr><th>Appareil</th><th>MAC</th><th>Signal</th><th>Débit</th><th>Connecté</th><th>Reçu</th><th>Envoyé</th></tr></thead>
+    <thead><tr><th scope="col">Appareil</th><th scope="col">Adresse MAC</th><th scope="col">Signal</th><th scope="col">Débit</th><th scope="col">Connecté depuis</th><th scope="col">Réception</th><th scope="col">Envoi</th></tr></thead>
     <tbody>
     {{range .Stations}}
     <tr>
       <td>{{or .Name "Sans nom"}}</td>
-      <td class="mono" data-label="MAC">{{.MAC}}</td>
+      <td class="mono" data-label="Adresse MAC">{{.MAC}}</td>
       <td data-label="Signal">{{.Signal}} dBm</td>
       <td data-label="Débit">{{.Rate}}</td>
-      <td data-label="Connecté">{{since .Conn}}</td>
-      <td data-label="Reçu">{{bytes .RX}}</td>
-      <td data-label="Envoyé">{{bytes .TX}}</td>
+      <td data-label="Connecté depuis">{{since .Conn}}</td>
+      <td data-label="Réception">{{bytes .RX}}</td>
+      <td data-label="Envoi">{{bytes .TX}}</td>
     </tr>
     {{end}}
     </tbody>
   </table>
+  {{if .MoreStations}}<p><a href="/wifi-radar?ap={{.Sel.ID}}&amp;all=1">Tout afficher ({{.MoreStations}})</a></p>{{end}}
   {{else}}<p class="empty">Aucun appareil sur cette radio.</p>{{end}}
 </section>
 
@@ -33,7 +34,7 @@
     <h2>Utilisation des canaux</h2>
     {{if .Usage}}
     <table class="stack-sm">
-      <thead><tr><th>Canal</th><th>Occupation</th><th>Bruit</th></tr></thead>
+      <thead><tr><th scope="col">Canal</th><th scope="col">Occupation</th><th scope="col">Bruit</th></tr></thead>
       <tbody>{{range .Usage}}<tr><td>{{.Chan}}</td><td data-label="Occupation">{{.Busy}} %</td><td data-label="Bruit">{{.Noise}} dBm</td></tr>{{end}}</tbody>
     </table>
     {{else}}<p class="empty">Pas de mesure.</p>{{end}}
@@ -51,19 +52,20 @@
   <h2>Réseaux voisins</h2>
   {{if .Neighbors}}
   <table class="stack-sm">
-    <thead><tr><th>Nom (SSID)</th><th>Canal</th><th>Largeur</th><th>Signal</th></tr></thead>
+    <thead><tr><th scope="col">Nom (SSID)</th><th scope="col">Canal</th><th scope="col">Largeur</th><th scope="col">Signal</th></tr></thead>
     <tbody>
     {{range .Neighbors}}
     <tr><td>{{or .SSID "(masqué)"}}</td><td data-label="Canal">{{.Channel}}{{if .Secondary}} + {{.Secondary}}{{end}}</td><td data-label="Largeur">{{.Width}} MHz</td><td data-label="Signal">{{.Signal}} dBm</td></tr>
     {{end}}
     </tbody>
   </table>
+  {{if .MoreNeighbors}}<p><a href="/wifi-radar?ap={{.Sel.ID}}&amp;all=1">Tout afficher ({{.MoreNeighbors}})</a></p>{{end}}
   {{else}}<p class="empty">Aucun réseau voisin.</p>{{end}}
   <details class="inline section">
     <summary class="ghost-btn">Relancer l'analyse</summary>
     <form method="post" action="/wifi-radar/scan" class="stack">
       <input type="hidden" name="ap" value="{{.Sel.ID}}">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{.Sel.Name}} est indisponible pendant l'analyse.</label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{band .Sel.Config.Band}} est indisponible pendant l'analyse.</label>
       <button class="small danger">Lancer l'analyse</button>
     </form>
   </details>
