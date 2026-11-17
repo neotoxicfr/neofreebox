@@ -1,0 +1,176 @@
+{{define "title"}}Contrôle parental · neofreebox{{end}}
+{{define "content"}}
+<h1>Contrôle parental</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">Un profil regroupe des appareils, avec un planning d'accès par semaine. Les appareils sans profil suivent le mode par défaut.</p>
+<div class="grid">
+  <section class="card">
+    <h2>Mode par défaut</h2>
+    <p>Appareils sans profil : <span class="badge {{if eq .Default "allowed"}}on{{else}}off{{end}}">{{.DefaultLabel}}</span></p>
+    <form method="post" action="/profiles/default" class="stack">
+      <label>Nouveau mode
+        <select name="mode">
+          {{range .Modes}}<option value="{{.}}"{{if eq . $.Default}} selected{{end}}>{{index $.Labels .}}</option>{{end}}
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode autre que « Autorisé » coupe ou limite tous les appareils sans profil.</label>
+      <div><button class="danger">Enregistrer</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Nouveau profil</h2>
+    <form method="post" action="/profiles/add" class="row">
+      <label class="grow">Nom<input name="name" required maxlength="64" placeholder="Enfants"></label>
+      <button>Créer</button>
+    </form>
+  </section>
+</div>
+
+{{range $p := .Profiles}}
+<section class="card section">
+  <h2>{{$p.Name}}
+    {{if $p.Err}}<span class="badge off">erreur</span>
+    {{else if $p.Paused}}<span class="badge off">accès coupé</span>
+    {{else if $p.Blocked}}<span class="badge off">{{$p.Mode}}</span>
+    {{else}}<span class="badge on">{{$p.Mode}}</span>{{end}}
+  </h2>
+  {{if $p.Err}}<p class="error" role="alert">{{$p.Err}}</p>{{else}}
+  <dl>
+    <dt>Selon le planning</dt><dd>{{$p.RuleMode}}</dd>
+    {{if $p.Paused}}<dt>Pause</dt><dd>{{if $p.HasUntil}}jusqu'au {{date $p.NC.OverrideUntil}}{{else}}jusqu'à reprise manuelle{{end}}</dd>{{end}}
+    {{if $p.HasNext}}<dt>Prochain changement</dt><dd>{{date $p.NC.NextChange}}</dd>{{end}}
+  </dl>
+
+  <h3>Accès immédiat</h3>
+  {{if $p.Paused}}
+  <form method="post" action="/profiles/{{$p.ID}}/resume"><button>Reprendre l'accès</button></form>
+  {{else}}
+  <form method="post" action="/profiles/{{$p.ID}}/pause" class="stack">
+    <label>Durée
+      <select name="minutes">
+        <option value="30">30 minutes</option>
+        <option value="60" selected>1 heure</option>
+        <option value="120">2 heures</option>
+        <option value="480">8 heures</option>
+        <option value="0">Jusqu'à reprise manuelle</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les appareils de « {{$p.Name}} » perdent l'accès à internet.</label>
+    <div><button class="danger">Couper l'accès</button></div>
+  </form>
+  {{end}}
+
+  <h3>Appareils</h3>
+  {{if $p.Devices}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Nom</th><th>MAC</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range $p.Devices}}
+    <tr>
+      <td>{{or .Name "Appareil inconnu"}}</td>
+      <td class="mono" data-label="MAC">{{.MAC}}</td>
+      <td><form method="post" action="/profiles/{{$p.ID}}/detach"><input type="hidden" name="mac" value="{{.MAC}}"><button class="ghost small">Détacher</button></form></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun appareil rattaché.</p>{{end}}
+  {{if $p.Free}}
+  <form method="post" action="/profiles/{{$p.ID}}/attach" class="row">
+    <label class="grow">Rattacher un appareil
+      <select name="mac" required>
+        {{range $p.Free}}<option value="{{.MAC}}">{{.Name}} ({{.MAC}})</option>{{end}}
+      </select>
+    </label>
+    <button>Rattacher</button>
+  </form>
+  {{end}}
+
+  <h3>Planning de la semaine</h3>
+  {{if $p.Rules}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Règle</th><th>Jours</th><th>Horaire</th><th>Mode</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range $p.Rules}}
+    <tr>
+      <td><span class="badge {{if .Enabled}}on{{else}}off{{end}}">{{if .Enabled}}active{{else}}inactive{{end}}</span> {{.Name}}</td>
+      <td data-label="Jours">{{.Days}}</td>
+      <td class="mono" data-label="Horaire">{{.Hours}}</td>
+      <td data-label="Mode">{{.ModeLabel}}</td>
+      <td>
+        <div class="actions">
+          {{if .Enabled}}
+          <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle"><button class="ghost small">Désactiver</button></form>
+          {{else}}
+          <details class="inline">
+            <summary class="ghost-btn">Activer</summary>
+            <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle" class="stack">
+              <input type="hidden" name="enable" value="1">
+              <label class="check"><input type="checkbox" name="confirm" value="1"{{if ne .Mode "allowed"}} required{{end}}> Je comprends que cette règle peut couper l'accès du profil.</label>
+              <div><button class="small">Activer</button></div>
+            </form>
+          </details>
+          {{end}}
+          <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/delete"><button class="ghost small">Supprimer</button></form>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucune règle : l'accès suit le mode « {{$p.RuleMode}} ».</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter une règle</summary>
+    <form method="post" action="/profiles/{{$p.ID}}/rules/add" class="stack">
+      <label>Nom<input name="name" maxlength="64" placeholder="Nuit"></label>
+      <div class="row">
+        <label>Mode
+          <select name="mode">
+            {{range $.Modes}}<option value="{{.}}"{{if eq . "denied"}} selected{{end}}>{{index $.Labels .}}</option>{{end}}
+          </select>
+        </label>
+        <label>De<input type="time" name="start" step="300" value="22:00" required></label>
+        <label>À<input type="time" name="end" step="300" value="07:00" required></label>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" name="day0" value="1" checked> Lun</label>
+        <label class="check"><input type="checkbox" name="day1" value="1" checked> Mar</label>
+        <label class="check"><input type="checkbox" name="day2" value="1" checked> Mer</label>
+        <label class="check"><input type="checkbox" name="day3" value="1" checked> Jeu</label>
+        <label class="check"><input type="checkbox" name="day4" value="1" checked> Ven</label>
+        <label class="check"><input type="checkbox" name="day5" value="1" checked> Sam</label>
+        <label class="check"><input type="checkbox" name="day6" value="1" checked> Dim</label>
+      </div>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une règle « Bloqué » ou « Web seul » coupe ou limite l'accès du profil à ces heures.</label>
+      <div><button class="small">Ajouter</button></div>
+    </form>
+  </details>
+
+  <h3>Gérer le profil</h3>
+  <div class="actions">
+    <details class="inline">
+      <summary class="ghost-btn">Renommer</summary>
+      <form method="post" action="/profiles/{{$p.ID}}/rename" class="row">
+        <label class="grow">Nouveau nom<input name="name" value="{{$p.Name}}" required maxlength="64"></label>
+        <button class="small">Enregistrer</button>
+      </form>
+    </details>
+    <details class="inline">
+      <summary class="ghost-btn danger">Supprimer</summary>
+      <form method="post" action="/profiles/{{$p.ID}}/delete" class="stack">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le profil « {{$p.Name}} » et son planning seront supprimés, et que ses appareils suivront le mode par défaut.</label>
+        <div><button class="danger small">Supprimer le profil</button></div>
+      </form>
+    </details>
+  </div>
+  {{end}}
+</section>
+{{else}}
+<p class="empty">Aucun profil pour l'instant.</p>
+{{end}}
+{{end}}
+{{end}}
