@@ -6,7 +6,7 @@
 <div class="grid">
 
 <section class="card">
-  <h2>Partage Windows (Samba) <span class="badge {{if .Samba.FileShare}}on{{else}}off{{end}}">{{if .Samba.FileShare}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>Partage Windows (Samba) <span class="badge{{if .Samba.FileShare}} on{{end}}">{{if .Samba.FileShare}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/samba" class="stack">
     <label class="check"><input type="checkbox" name="file_share" value="1"{{if .Samba.FileShare}} checked{{end}}> Partager les fichiers</label>
     <label class="check"><input type="checkbox" name="print_share" value="1"{{if .Samba.PrintShare}} checked{{end}}> Partager les imprimantes</label>
@@ -31,7 +31,7 @@
 </section>
 
 <section class="card">
-  <h2>Partage Mac (AFP) <span class="badge {{if .Afp.Enabled}}on{{else}}off{{end}}">{{if .Afp.Enabled}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>Partage Mac (AFP) <span class="badge{{if .Afp.Enabled}} on{{end}}">{{if .Afp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/afp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Afp.Enabled}} checked{{end}}> Activer le partage Mac</label>
     <label class="check"><input type="checkbox" name="guest_allow" value="1"{{if .Afp.GuestAllow}} checked{{end}}> Autoriser les invités</label>
@@ -46,12 +46,13 @@
 </section>
 
 <section class="card">
-  <h2>FTP <span class="badge {{if .Ftp.Enabled}}on{{else}}off{{end}}">{{if .Ftp.Enabled}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>FTP <span class="badge{{if .Ftp.Enabled}} on{{end}}">{{if .Ftp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/ftp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Ftp.Enabled}} checked{{end}}> Activer le serveur FTP</label>
     <p class="muted">Utilisateur : <span class="mono">{{.Ftp.Username}}</span>{{if .Ftp.WeakPassword}} · mot de passe faible (l'accès distant est refusé){{end}}</p>
     <label>Nouveau mot de passe<input type="password" name="password" autocomplete="new-password" placeholder="Inchangé"></label>
-    <div class="actions"><button>Enregistrer</button></div>
+    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'activation du FTP publie les fichiers avec l'accès déjà réglé ci-dessous (case requise pour activer).</label>
+    <button>Enregistrer</button></div>
   </form>
   <h3>Accès depuis l'extérieur</h3>
   {{if .Ftp.Exposed}}<p class="error">Le FTP est ouvert{{if .Ftp.Remote}} depuis internet{{end}}{{if .Ftp.Anonymous}}{{if .Ftp.Remote}} et{{end}} sans mot de passe{{end}}.</p>{{end}}
@@ -69,7 +70,7 @@
 </section>
 
 <section class="card">
-  <h2>TFTP <span class="badge {{if .Tftp.Enabled}}on{{else}}off{{end}}">{{if .Tftp.Enabled}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>TFTP <span class="badge{{if .Tftp.Enabled}} on{{end}}">{{if .Tftp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/tftp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Tftp.Enabled}} checked{{end}}> Activer le serveur TFTP</label>
     <label>Dossier racine<input name="root" value="{{.Tftp.Path}}" class="mono" required placeholder="/Freebox/tftp"></label>
@@ -80,7 +81,7 @@
 </section>
 
 <section class="card">
-  <h2>UPnP AV <span class="badge {{if .Upnp.Enabled}}on{{else}}off{{end}}">{{if .Upnp.Enabled}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>UPnP AV <span class="badge{{if .Upnp.Enabled}} on{{end}}">{{if .Upnp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/upnpav" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Upnp.Enabled}} checked{{end}}> Serveur multimédia (TV, lecteurs réseau)</label>
     <div class="actions"><button>Enregistrer</button></div>
@@ -88,7 +89,7 @@
 </section>
 
 <section class="card">
-  <h2>AirMedia <span class="badge {{if .Air.Enabled}}on{{else}}off{{end}}">{{if .Air.Enabled}}actif{{else}}coupé{{end}}</span></h2>
+  <h2>AirMedia <span class="badge{{if .Air.Enabled}} on{{end}}">{{if .Air.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/airmedia" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Air.Enabled}} checked{{end}}> Récepteur AirMedia de la box</label>
     <label>Nouveau mot de passe<input type="password" name="password" autocomplete="new-password" placeholder="Inchangé"></label>
@@ -96,7 +97,7 @@
   </form>
   <h3>Récepteurs joignables</h3>
   {{if .Receivers}}
-  <ul>{{range .Receivers}}<li>{{.Name}}{{if .PasswordProtected}} <span class="badge off">mot de passe</span>{{end}} <span class="muted">{{range $i, $c := .Caps}}{{if $i}}, {{end}}{{$c}}{{end}}</span></li>{{end}}</ul>
+  <ul>{{range .Receivers}}<li>{{.Name}}{{if .PasswordProtected}} <span class="badge">mot de passe</span>{{end}} <span class="muted">{{range $i, $c := .Caps}}{{if $i}}, {{end}}{{$c}}{{end}}</span></li>{{end}}</ul>
   {{else}}<p class="empty">Aucun récepteur AirMedia.</p>{{end}}
 </section>
 

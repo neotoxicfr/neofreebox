@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
 
@@ -153,7 +155,10 @@ func (s *Server) channelChoices(ctx context.Context) []channelChoice {
 	}
 	var chans []tvBouquetChannel
 	var names map[string]tvChannelInfo
-	if s.fetch(ctx, "tv/bouquets/"+strconv.Itoa(bouquets[0].ID)+"/channels/", &chans) != nil || s.fetch(ctx, "tv/channels/", &names) != nil {
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return s.fetch(gctx, "tv/bouquets/"+strconv.Itoa(bouquets[0].ID)+"/channels/", &chans) })
+	g.Go(func() error { return s.fetch(gctx, "tv/channels/", &names) })
+	if g.Wait() != nil {
 		return nil
 	}
 	sort.SliceStable(chans, func(i, j int) bool { return chans[i].Number < chans[j].Number })
@@ -172,14 +177,16 @@ func (s *Server) recordings(w http.ResponseWriter, r *http.Request) {
 	var quota pvrQuota
 	var media []pvrMedia
 	var programmed, finished []record
-	err := firstErr(
-		s.fetch(ctx, "pvr/config/", &cfg),
-		s.fetch(ctx, "pvr/quota/", &quota),
-		s.fetch(ctx, "pvr/media/", &media),
-		s.fetch(ctx, "pvr/programmed/", &programmed),
-		s.fetch(ctx, "pvr/finished/", &finished),
-	)
-	if err != nil {
+	var channels []channelChoice
+	// Independent box calls go out together: the page waits for the slowest.
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return s.fetch(gctx, "pvr/config/", &cfg) })
+	g.Go(func() error { return s.fetch(gctx, "pvr/quota/", &quota) })
+	g.Go(func() error { return s.fetch(gctx, "pvr/media/", &media) })
+	g.Go(func() error { return s.fetch(gctx, "pvr/programmed/", &programmed) })
+	g.Go(func() error { return s.fetch(gctx, "pvr/finished/", &finished) })
+	g.Go(func() error { channels = s.channelChoices(gctx); return nil })
+	if err := g.Wait(); err != nil {
 		s.show(w, r, "recordings", nil, err)
 		return
 	}
@@ -188,19 +195,10 @@ func (s *Server) recordings(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	s.show(w, r, "recordings", map[string]any{
 		"Config": cfg, "Quota": quota, "Media": media, "Programmed": programmed, "Finished": finished,
-		"Channels": s.channelChoices(ctx),
+		"Channels": channels,
 		"DefStart": now.Add(time.Hour).Truncate(time.Hour).Format(inputTime),
 		"DefEnd":   now.Add(2 * time.Hour).Truncate(time.Hour).Format(inputTime),
 	}, nil)
-}
-
-func firstErr(errs ...error) error {
-	for _, e := range errs {
-		if e != nil {
-			return e
-		}
-	}
-	return nil
 }
 
 func (s *Server) pvrConfig(w http.ResponseWriter, r *http.Request) {
@@ -271,6 +269,9 @@ func (s *Server) enablePrecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deletePrecord(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/recordings") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "pvr/programmed/"+url.PathEscape(r.PathValue("id"))+"/", nil, "Enregistrement supprimé.", "/recordings")
 }
 

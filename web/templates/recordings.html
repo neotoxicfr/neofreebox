@@ -8,22 +8,22 @@
   {{if .Programmed}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Chaîne</th><th>Début</th><th>Fin</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Chaîne</th><th scope="col">Début</th><th scope="col">Fin</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Programmed}}
     <tr>
-      <td>{{.Name}}{{if .SubName}} <span class="muted">· {{.SubName}}</span>{{end}}{{if .Generated}} <span class="badge off">généré</span>{{end}}</td>
+      <td>{{.Name}}{{if .SubName}} <span class="muted">· {{.SubName}}</span>{{end}}{{if .Generated}} <span class="badge">généré</span>{{end}}</td>
       <td data-label="Chaîne">{{.ChannelName}}</td>
       <td data-label="Début">{{date .Start}}</td>
       <td data-label="Fin">{{date .End}}</td>
-      <td data-label="État"><span class="badge {{if .StateOK}}on{{else}}off{{end}}">{{.StateLabel}}</span>{{if .Conflict}} <span class="badge off">conflit</span>{{end}}</td>
+      <td data-label="État"><span class="badge{{if .StateOK}} on{{else}} warn{{end}}">{{.StateLabel}}</span>{{if .Conflict}} <span class="badge warn">conflit</span>{{end}}</td>
       <td>
         <div class="actions">
           {{if .Generated}}
-          <form method="post" action="/recordings/programmed/{{.ID}}/enabled"><input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}"><button class="ghost small">{{if .Enabled}}Désactiver{{else}}Activer{{end}}</button></form>
+          <form method="post" action="/recordings/programmed/{{.ID}}/enabled"><input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}"><button class="ghost small">{{if .Enabled}}Désactiver{{else}}Activer{{end}}<span class="sr-only"> {{.Name}}</span></button></form>
           {{else}}
           <details class="inline">
-            <summary class="ghost-btn">Modifier</summary>
+            <summary class="ghost-btn">Modifier<span class="sr-only"> {{.Name}}</span></summary>
             <form method="post" action="/recordings/programmed/{{.ID}}/update" class="stack">
               <label>Nom<input name="name" value="{{.Name}}" required maxlength="128"></label>
               <label>Sous-titre<input name="subname" value="{{.SubName}}" maxlength="128"></label>
@@ -33,7 +33,13 @@
             </form>
           </details>
           {{end}}
-          <form method="post" action="/recordings/programmed/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Name}}</span></summary>
+            <form method="post" action="/recordings/programmed/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'enregistrement programmé « {{.Name}} » sera annulé (arrêté s'il est en cours).</label>
+              <button class="danger small">Supprimer définitivement</button>
+            </form>
+          </details>
         </div>
       </td>
     </tr>
@@ -65,7 +71,7 @@
   {{if .Finished}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Chaîne</th><th>Date</th><th>Taille</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Chaîne</th><th scope="col">Date</th><th scope="col">Taille</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Finished}}
     <tr>
@@ -73,11 +79,11 @@
       <td data-label="Chaîne">{{.ChannelName}}</td>
       <td data-label="Date">{{date .Start}}</td>
       <td data-label="Taille">{{bytes .ByteSize}}</td>
-      <td data-label="État"><span class="badge {{if .StateOK}}on{{else}}off{{end}}">{{.StateLabel}}</span>{{if .Altered}} <span class="badge off">incomplet</span>{{end}}</td>
+      <td data-label="État"><span class="badge{{if .StateOK}} on{{else}} warn{{end}}">{{.StateLabel}}</span>{{if .Altered}} <span class="badge warn">incomplet</span>{{end}}</td>
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Renommer</summary>
+            <summary class="ghost-btn">Renommer<span class="sr-only"> {{.Name}}</span></summary>
             <form method="post" action="/recordings/finished/{{.ID}}/rename" class="stack">
               <label>Nom<input name="name" value="{{.Name}}" required maxlength="128"></label>
               <label>Sous-titre<input name="subname" value="{{.SubName}}" maxlength="128"></label>
@@ -85,10 +91,10 @@
             </form>
           </details>
           <details class="inline">
-            <summary class="ghost-btn danger">Supprimer</summary>
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Name}}</span></summary>
             <form method="post" action="/recordings/finished/{{.ID}}/delete" class="stack">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la vidéo « {{.Name}} » sera effacée du disque, sans retour possible.</label>
-              <button class="small danger">Supprimer la vidéo</button>
+              <button class="small danger">Supprimer définitivement la vidéo</button>
             </form>
           </details>
         </div>
@@ -118,7 +124,7 @@
       {{range .Media}}<dt>{{.Media}}</dt><dd>{{bytes .Free}} libres sur {{bytes .Total}} ({{.Used}} % utilisés)</dd>{{end}}
     </dl>
     {{else}}<p class="empty">Aucun disque d'enregistrement : branche un disque sur la box.</p>{{end}}
-    <p>Quota : <span class="badge {{if .Quota.Exceeded}}off{{else}}on{{end}}">{{if .Quota.Exceeded}}dépassé{{else}}respecté{{end}}</span>
+    <p>Quota : <span class="badge {{if .Quota.Exceeded}}warn{{else}}on{{end}}">{{if .Quota.Exceeded}}dépassé{{else}}respecté{{end}}</span>
       <span class="muted">palier {{.Quota.Current}} / {{.Quota.Needed}}</span></p>
     {{if .Quota.Exceeded}}<form method="post" action="/recordings/quota"><button class="ghost small">Demander le palier suivant</button></form>{{end}}
   </section>

@@ -7,7 +7,7 @@
 <h1>{{.Name}}</h1>
 <section class="card section">
   <div class="row">
-    <span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StatusLabel}}</span>
+    <span class="badge{{if eq .Status "error"}} off{{else if .Active}} on{{end}}">{{.StatusLabel}}</span>
     <span class="muted">{{.Type}} · {{bytes .Size}}</span>
   </div>
   <progress max="100" value="{{.Pct}}">{{.Pct}} %</progress> {{.Pct}} %
@@ -45,7 +45,7 @@
   {{if $.FilesErr}}<p class="error">{{$.FilesErr}}</p>{{else if $.Files}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Taille</th><th>Reçu</th><th>État</th><th>Priorité</th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Taille</th><th scope="col">Reçu</th><th scope="col">État</th><th scope="col">Priorité</th></tr></thead>
     <tbody>
     {{range $.Files}}
     <tr>
@@ -62,7 +62,7 @@
             <option value="normal"{{if eq .Priority "normal"}} selected{{end}}>Normale</option>
             <option value="high"{{if eq .Priority "high"}} selected{{end}}>Haute</option>
           </select>
-          <button class="ghost small">OK</button>
+          <button class="ghost small">OK<span class="sr-only"> {{.Name}}</span></button>
         </form>
       </td>
     </tr>
@@ -79,7 +79,7 @@
   {{if $.TrackersErr}}<p class="error">{{$.TrackersErr}}</p>{{else if $.Trackers}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Adresse</th><th>État</th><th>Sources</th><th>Sangsues</th><th>Prochaine annonce</th></tr></thead>
+    <thead><tr><th scope="col">Adresse</th><th scope="col">État</th><th scope="col">Sources</th><th scope="col">Sangsues</th><th scope="col">Prochaine annonce</th></tr></thead>
     <tbody>
     {{range $.Trackers}}
     <tr>
@@ -108,7 +108,7 @@
   {{if $.PeersErr}}<p class="error">{{$.PeersErr}}</p>{{else if $.Peers}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Adresse</th><th>Client</th><th>Origine</th><th>État</th><th>Avancement</th><th>Reçu</th><th>Envoyé</th></tr></thead>
+    <thead><tr><th scope="col">Adresse</th><th scope="col">Client</th><th scope="col">Origine</th><th scope="col">État</th><th scope="col">Avancement</th><th scope="col">Reçu</th><th scope="col">Envoyé</th></tr></thead>
     <tbody>
     {{range $.Peers}}
     <tr>
@@ -143,14 +143,14 @@
   {{if $.BlackErr}}<p class="error">{{$.BlackErr}}</p>{{else if $.Blacklist}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Adresse</th><th>Raison</th><th>Expire dans</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Adresse</th><th scope="col">Raison</th><th scope="col">Expire dans</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range $.Blacklist}}
     <tr>
       <td class="mono">{{.Host}}{{if .Global}} <span class="muted">(global)</span>{{end}}</td>
       <td data-label="Raison">{{.Reason}}</td>
       <td data-label="Expire dans">{{since .Expire}}</td>
-      <td><form method="post" action="/downloads/{{$.Task.ID}}/unblock"><input type="hidden" name="host" value="{{.Host}}"><button class="ghost small">Débloquer</button></form></td>
+      <td><form method="post" action="/downloads/{{$.Task.ID}}/unblock"><input type="hidden" name="host" value="{{.Host}}"><button class="ghost small">Débloquer<span class="sr-only"> {{.Host}}</span></button></form></td>
     </tr>
     {{end}}
     </tbody>
@@ -190,7 +190,7 @@
   {{if .Items}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Titre</th><th>Publié le</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Titre</th><th scope="col">Publié le</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Items}}
     <tr>
@@ -199,9 +199,9 @@
       <td data-label="État">{{if .IsDownloaded}}téléchargé{{else if .IsRead}}lu{{else}}nouveau{{end}}</td>
       <td>
         <div class="actions">
-          {{if not .IsDownloaded}}<form method="post" action="/downloads/feeds/{{$.Feed.ID}}/items/{{.ID}}/download"><button class="small">Télécharger</button></form>{{end}}
+          {{if not .IsDownloaded}}<form method="post" action="/downloads/feeds/{{$.Feed.ID}}/items/{{.ID}}/download"><button class="small">Télécharger<span class="sr-only"> {{.Title}}</span></button></form>{{end}}
           <form method="post" action="/downloads/feeds/{{$.Feed.ID}}/items/{{.ID}}/read">
-            {{if .IsRead}}<button class="ghost small">Marquer non lu</button>{{else}}<input type="hidden" name="read" value="1"><button class="ghost small">Marquer lu</button>{{end}}
+            {{if .IsRead}}<button class="ghost small">Marquer non lu<span class="sr-only"> {{.Title}}</span></button>{{else}}<input type="hidden" name="read" value="1"><button class="ghost small">Marquer lu<span class="sr-only"> {{.Title}}</span></button>{{end}}
           </form>
         </div>
       </td>
@@ -233,11 +233,11 @@
   <h2>File d'attente</h2>
   {{if .Tasks}}
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Avancement</th><th>Débit</th><th>Taille</th><th>Priorité</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Avancement</th><th scope="col">Débit</th><th scope="col">Taille</th><th scope="col">Priorité</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Tasks}}
     <tr>
-      <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StatusLabel}}</span> <a href="/downloads/{{.ID}}">{{.Name}}</a>{{if and .Error (ne .Error "none")}} <span class="error">({{.Error}})</span>{{end}}</td>
+      <td><span class="badge{{if eq .Status "error"}} off{{else if .Active}} on{{end}}">{{.StatusLabel}}</span> <a href="/downloads/{{.ID}}">{{.Name}}</a>{{if and .Error (ne .Error "none")}} <span class="error">({{.Error}})</span>{{end}}</td>
       <td data-label="Avancement"><progress max="100" value="{{.Pct}}">{{.Pct}} %</progress> {{.Pct}} %{{if and (gt .ETA 0) (eq .Status "downloading")}} · {{since .ETA}}{{end}}</td>
       <td data-label="Débit">↓ {{bits .RxRate}} · ↑ {{bits .TxRate}}</td>
       <td data-label="Taille">{{bytes .Size}}</td>
@@ -248,18 +248,24 @@
             <option value="normal"{{if eq .IOPriority "normal"}} selected{{end}}>Normale</option>
             <option value="high"{{if eq .IOPriority "high"}} selected{{end}}>Haute</option>
           </select>
-          <button class="ghost small">OK</button>
+          <button class="ghost small">OK<span class="sr-only"> {{.Name}}</span></button>
         </form>
       </td>
       <td>
         <div class="actions">
-          {{if .Active}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="stopped"><button class="ghost small">Pause</button></form>{{end}}
-          {{if .CanResume}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="downloading"><button class="small">Reprendre</button></form>{{end}}
-          {{if .CanRetry}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="retry"><button class="small">Réessayer</button></form>{{end}}
-          {{if .CanSeed}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="seeding"><button class="ghost small">Partager</button></form>{{end}}
-          <form method="post" action="/downloads/{{.ID}}/delete"><button class="ghost small">Retirer</button></form>
+          {{if .Active}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="stopped"><button class="ghost small">Pause<span class="sr-only"> {{.Name}}</span></button></form>{{end}}
+          {{if .CanResume}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="downloading"><button class="small">Reprendre<span class="sr-only"> {{.Name}}</span></button></form>{{end}}
+          {{if .CanRetry}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="retry"><button class="small">Réessayer<span class="sr-only"> {{.Name}}</span></button></form>{{end}}
+          {{if .CanSeed}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="seeding"><button class="ghost small">Partager<span class="sr-only"> {{.Name}}</span></button></form>{{end}}
           <details class="inline">
-            <summary class="ghost-btn danger">Supprimer les fichiers</summary>
+            <summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.Name}} de la liste</span></summary>
+            <form method="post" action="/downloads/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera retirée de la liste (les fichiers sont conservés).</label>
+              <button class="small danger">Retirer définitivement</button>
+            </form>
+          </details>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer les fichiers<span class="sr-only"> de {{.Name}}</span></summary>
             <form method="post" action="/downloads/{{.ID}}/erase" class="stack">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les fichiers téléchargés seront effacés définitivement.</label>
               <button class="small danger">Supprimer avec les fichiers</button>
@@ -308,7 +314,7 @@
   {{if .Feeds}}
   <div class="table-wrap">
   <table class="stack-sm">
-    <thead><tr><th>Flux</th><th>Éléments</th><th>Dernière actualisation</th><th>Téléchargement auto</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Flux</th><th scope="col">Éléments</th><th scope="col">Dernière actualisation</th><th scope="col">Téléchargement auto</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Feeds}}
     <tr>
@@ -318,13 +324,19 @@
       <td data-label="Téléchargement auto">
         <form method="post" action="/downloads/feeds/{{.ID}}/auto" class="row">
           <label class="check"><input type="checkbox" name="auto" value="1"{{if .AutoDownload}} checked{{end}}> Activé</label>
-          <button class="ghost small">OK</button>
+          <button class="ghost small">OK<span class="sr-only"> {{or .Title .URL}}</span></button>
         </form>
       </td>
       <td>
         <div class="actions">
-          <form method="post" action="/downloads/feeds/{{.ID}}/fetch"><button class="ghost small">Actualiser</button></form>
-          <form method="post" action="/downloads/feeds/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+          <form method="post" action="/downloads/feeds/{{.ID}}/fetch"><button class="ghost small">Actualiser<span class="sr-only"> {{or .Title .URL}}</span></button></form>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Title .URL}}</span></summary>
+            <form method="post" action="/downloads/feeds/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le flux et ses éléments seront supprimés (les téléchargements sont conservés).</label>
+              <button class="small danger">Supprimer définitivement</button>
+            </form>
+          </details>
         </div>
       </td>
     </tr>
@@ -411,7 +423,7 @@
   <p class="hint">Une ligne par jour, une colonne par heure (0 à 23). · : normal, L : ralenti, P : pause.</p>
   <div class="table-wrap">
   <table class="plan">
-    <thead><tr><th>Jour</th>{{range $h := .Hours}}<th>{{$h}}</th>{{end}}</tr></thead>
+    <thead><tr><th scope="col">Jour</th>{{range $h := .Hours}}<th scope="col">{{$h}}</th>{{end}}</tr></thead>
     <tbody>
     {{range .Planning}}<tr><td>{{.Name}}</td>{{range .Slots}}<td>{{.}}</td>{{end}}</tr>{{end}}
     </tbody>
