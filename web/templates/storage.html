@@ -1,0 +1,110 @@
+{{define "title"}}Disques · neofreebox{{end}}
+{{define "content"}}
+<h1>Disques</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+{{range .Disks}}
+<section class="card section">
+  <h2>{{or .Model "Disque"}} <span class="badge {{if eq .State "enabled"}}on{{else}}off{{end}}">{{.State}}</span></h2>
+  <dl>
+    <dt>Type</dt><dd>{{.Type}}, {{.TableType}}, {{bytes .TotalBytes}}</dd>
+    {{if .Serial}}<dt>Numéro de série</dt><dd class="mono">{{.Serial}}</dd>{{end}}
+    {{if .Firmware}}<dt>Firmware</dt><dd class="mono">{{.Firmware}}</dd>{{end}}
+    {{if .Temp}}<dt>Température</dt><dd>{{.Temp}} °C</dd>{{end}}
+    <dt>Erreurs de lecture / écriture</dt><dd>{{if .Errors}}<span class="error">{{.ReadErrors}} / {{.WriteErrors}}</span>{{else}}0 / 0{{end}}</dd>
+    {{if eq .State "formatting"}}<dt>Formatage</dt><dd>{{.OperationPct.Percent}} %</dd>{{end}}
+  </dl>
+  {{if .Partitions}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Partition</th><th>Système</th><th>Utilisé</th><th>Libre</th><th>Taille</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Partitions}}
+    <tr>
+      <td><span class="badge {{if eq .State "mounted"}}on{{else}}off{{end}}">{{.State}}</span> {{or .Label "Sans nom"}}</td>
+      <td data-label="Système">{{.FSType}}</td>
+      <td data-label="Utilisé">{{bytes .UsedBytes}} ({{.UsedPct}} %)</td>
+      <td data-label="Libre">{{bytes .FreeBytes}}</td>
+      <td data-label="Taille">{{bytes .TotalBytes}}</td>
+      <td>
+        <div class="actions">
+          {{if .Busy}}<span class="muted">{{.OperationPc.Percent}} %</span>{{else}}
+          <form method="post" action="/storage/partitions/{{.ID}}/check" class="row">
+            <select name="checkmode" aria-label="Mode de vérification"><option value="ro">Lecture seule</option><option value="rw">Réparer</option></select>
+            <button class="ghost small">Vérifier</button>
+          </form>
+          {{if eq .State "mounted"}}
+          <details class="inline">
+            <summary class="ghost-btn danger">Démonter</summary>
+            <form method="post" action="/storage/partitions/{{.ID}}/state" class="stack">
+              <input type="hidden" name="state" value="umounted">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les services qui utilisent cette partition seront coupés.</label>
+              <button class="small danger">Démonter</button>
+            </form>
+          </details>
+          {{else if eq .State "umounted"}}
+          <form method="post" action="/storage/partitions/{{.ID}}/state"><input type="hidden" name="state" value="mounted"><button class="ghost small">Monter</button></form>
+          {{end}}
+          {{end}}
+        </div>
+        {{if .FsckResult}}<p class="hint">Dernière vérification : {{.FsckResult}}</p>{{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucune partition.</p>{{end}}
+  {{if not .Internal}}
+  <div class="actions">
+    {{if eq .State "enabled"}}
+    <details class="inline">
+      <summary class="ghost-btn danger">Éjecter</summary>
+      <form method="post" action="/storage/disks/{{.ID}}/state" class="stack">
+        <input type="hidden" name="state" value="disabled">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le disque sera démonté et inaccessible.</label>
+        <button class="small danger">Éjecter</button>
+      </form>
+    </details>
+    {{else if eq .State "disabled"}}
+    <form method="post" action="/storage/disks/{{.ID}}/state"><input type="hidden" name="state" value="enabled"><button class="ghost small">Activer</button></form>
+    {{end}}
+    <details class="inline">
+      <summary class="ghost-btn danger">Formater</summary>
+      <form method="post" action="/storage/disks/{{.ID}}/format" class="stack">
+        <div class="row">
+          <label>Table<select name="table_type"><option value="gpt">GPT</option><option value="msdos">MSDOS</option></select></label>
+          <label>Système<select name="fs_type"><option value="ext4">ext4</option><option value="exfat">exFAT</option><option value="vfat">FAT32</option><option value="ntfs">NTFS</option></select></label>
+          <label class="grow">Nom<input name="label" maxlength="32"></label>
+        </div>
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toutes les données du disque seront effacées.</label>
+        <button class="small danger">Formater</button>
+      </form>
+    </details>
+  </div>
+  {{end}}
+</section>
+{{else}}
+<p class="empty">Aucun disque connecté à la box.</p>
+{{end}}
+
+<section class="card section">
+  <h2>Disques externes</h2>
+  <form method="post" action="/storage/config" class="stack">
+    <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Config.PMEnabled}} checked{{end}}> Mettre les disques externes en veille</label>
+    <label>Veille après (minutes d'inactivité)<input type="number" name="idle" min="1" max="1440" value="{{.Config.PMIdle}}" required></label>
+    <button>Enregistrer</button>
+  </form>
+</section>
+
+{{if .Raids}}
+<section class="card section">
+  <h2>RAID</h2>
+  {{range .Raids}}
+  <h3>{{.Name}} · {{.Level}} <span class="badge {{if and (eq .State "running") (not .Degraded)}}on{{else}}off{{end}}">{{.State}}{{if .Degraded}}, dégradé{{end}}</span></h3>
+  <p class="muted">{{bytes .ArraySize}}{{if ne .SyncAction "idle"}} · {{.SyncAction}} {{.SyncPercent}} %{{end}}</p>
+  <ul>{{range .Members}}<li>{{.Disk.Model}} : {{.Role}}{{if .Disk.Temp}}, {{.Disk.Temp}} °C{{end}}{{if .CorrectedReadErrors}}, {{.CorrectedReadErrors}} erreurs corrigées{{end}}</li>{{end}}</ul>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+{{end}}
