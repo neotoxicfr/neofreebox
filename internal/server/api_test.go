@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -137,20 +138,42 @@ func TestReadOnlyToken(t *testing.T) {
 }
 
 func TestRevokeAllClearsMemoryOnWriteFailure(t *testing.T) {
-	dir := t.TempDir()
-	ts, err := loadTokens(dir)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name      string
+		breakPath func(t *testing.T, dir string) string // returns the path that will fail
+	}{
+		{"write fails: missing parent", func(_ *testing.T, dir string) string {
+			return filepath.Join(dir, "missing", "tokens.json")
+		}},
+		{"rename fails: destination is a directory", func(t *testing.T, dir string) string {
+			p := filepath.Join(dir, "blocked.json")
+			if err := os.Mkdir(p, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(p, "x"), nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			return p
+		}},
 	}
-	tok, err := ts.create("x", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ts.path = filepath.Join(dir, "missing", "tokens.json") // the next write fails
-	if err := ts.revokeAll(); err == nil {
-		t.Fatal("write to a missing directory succeeded")
-	}
-	if _, ok := ts.lookup(tok); ok {
-		t.Fatal("token still valid after a failed revocation")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			ts, err := loadTokens(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tok, err := ts.create("x", false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ts.path = tt.breakPath(t, dir)
+			if err := ts.revokeAll(); err == nil {
+				t.Fatal("revocation reported success")
+			}
+			if _, ok := ts.lookup(tok); ok {
+				t.Fatal("token still valid after a failed revocation")
+			}
+		})
 	}
 }
