@@ -105,13 +105,27 @@ func (s *Server) change(w http.ResponseWriter, r *http.Request, method, path str
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 	if err := s.box.Do(ctx, method, path, body, nil); err != nil {
-		s.log.Error("change", "method", method, "path", path, "err", err)
+		s.log.Error("change", "method", method, "path", redact(path), "err", err)
 		setFlash(w, "err:"+err.Error())
 	} else {
-		s.log.Info("change", "method", method, "path", path)
+		s.log.Info("change", "method", method, "path", redact(path))
 		setFlash(w, "ok:"+done)
 	}
 	http.Redirect(w, r, back, http.StatusSeeOther)
+}
+
+// redact keeps the shape of an API path for the logs but hides its
+// identifiers (host MACs, voicemail ids that carry phone numbers, base64
+// file paths): any segment that is not a plain lowercase word.
+func redact(path string) string {
+	p, _, _ := strings.Cut(path, "?")
+	segs := strings.Split(p, "/")
+	for i, seg := range segs {
+		if strings.Trim(seg, "abcdefghijklmnopqrstuvwxyz_") != "" {
+			segs[i] = "{id}"
+		}
+	}
+	return strings.Join(segs, "/")
 }
 
 // confirmed reports whether a dangerous form was confirmed (a required

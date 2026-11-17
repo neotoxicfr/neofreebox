@@ -193,3 +193,16 @@ func TestHeaders(t *testing.T) {
 		t.Fatal("healthz")
 	}
 }
+
+func TestRedact(t *testing.T) {
+	for in, want := range map[string]string{
+		"call/voicemail/0639980078_1700000000/":    "call/voicemail/{id}/",
+		"lan/browser/pub/ether-00:11:22:33:44:55/": "lan/browser/pub/{id}/",
+		"fs/ls/L0Rpc3F1ZQ==?x=1":                   "fs/ls/{id}",
+		"dhcp/config/":                             "dhcp/config/",
+	} {
+		if got := redact(in); got != want {
+			t.Errorf("redact(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
