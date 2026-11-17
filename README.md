@@ -13,8 +13,8 @@ in a lightweight web app you run on your own server.
 </div>
 
 > [!WARNING]
-> **Work in progress.** Nothing is released yet; the roadmap below shows what
-> is done.
+> **Pre-release.** Every section of Freebox OS is covered, but not every
+> write has been tried on a real box yet; no version is tagged.
 
 ## Why neofreebox
 
@@ -36,16 +36,17 @@ Network comes first, then the rest of Freebox OS:
 
 - [x] Freebox OS API client: app pairing, sessions
 - [x] App shell: login, box status, container image
-- [ ] Live events from the box (WebSocket)
-- [ ] Network: devices, DHCP, port forwarding, DMZ, UPnP, Wi-Fi, IPv6, DNS, remote access
-- [ ] JSON API and MCP server, to drive the box from scripts or an AI assistant
-- [ ] WireGuard VPN server: peers, config files and QR codes
-- [ ] Monitoring: live bandwidth, history, events, fibre line
-- [ ] System: reboot, updates, LEDs, parental control, Freeplugs
-- [ ] Downloads
-- [ ] Files and shares (SMB, FTP, UPnP AV, AirMedia)
-- [ ] TV: channels, programme guide, recordings
-- [ ] Phone: call log, contacts, voicemail
+- [x] Network: devices, DHCP, port forwarding, DMZ, UPnP, connection, IPv6, DynDNS, LAN, Ethernet ports
+- [x] Wi-Fi: networks, guest access, planning, MAC filter, WPS, neighbourhood
+- [x] JSON API and MCP server (about 340 operations), to drive the box from scripts or an AI assistant
+- [x] VPN server (WireGuard peers, config files and QR codes) and VPN client
+- [x] Monitoring: history graphs, Freeplugs, notifications
+- [x] System: reboot, updates, screen and LEDs, standby, parental control, players, disks
+- [x] Downloads, files (browse, download, share links), shares (SMB, AFP, FTP, TFTP, UPnP AV, AirMedia)
+- [x] TV: channels, programme guide, recordings
+- [x] Phone: call log, voicemail, contacts
+- [ ] Live updates from the box (WebSocket events)
+- [ ] File upload (the box only offers it over WebSocket)
 
 ## Requirements
 
