@@ -145,7 +145,7 @@ func (t *tokenStore) lookup(tok string) (apiToken, bool) {
 
 type tokenKey struct{}
 
-var errReadOnlyToken = errors.New("this API token is read-only: it can only call operations that change nothing")
+var errReadOnlyToken = errors.New("this API token is read-only: it can only call operations that change nothing and reveal no secret")
 
 // bearer lets through requests carrying a valid API token.
 func (s *Server) bearer(next http.Handler) http.Handler {
@@ -208,7 +208,7 @@ func (s *Server) apiCall(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) callOp(ctx context.Context, op ops.Op, args map[string]any) (json.RawMessage, error) {
 	tok, _ := ctx.Value(tokenKey{}).(apiToken)
-	if tok.ReadOnly && !op.ReadOnly() {
+	if tok.ReadOnly && (!op.ReadOnly() || op.Secret) {
 		return nil, errReadOnlyToken
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)

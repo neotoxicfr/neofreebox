@@ -35,6 +35,9 @@ type Op struct {
 	// Read marks a POST that only reads (rrd/, batched file info): it is
 	// announced read-only and allowed for read-only API tokens.
 	Read bool
+	// Secret marks a read that returns keys or passwords (Wi-Fi keys, VPN
+	// configurations): read-only API tokens may not call it.
+	Secret bool
 	// Dangerous operations can cut the network or access, lose data, expose
 	// the box or its secrets, or make it reach an arbitrary address: they run
 	// only with "confirm": true in the arguments.
