@@ -1,0 +1,42 @@
+{{define "title"}}Veille · neofreebox{{end}}
+{{define "content"}}
+<h1>Veille</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">
+  Planning {{if .Status.UsePlanning}}<span class="badge on">actif</span>{{else}}<span class="badge off">inactif</span>{{end}}
+  {{with .ModeLabel}} · {{.}}{{end}}
+  {{if .Status.NextChange}} · prochain changement le {{date .Status.NextChange}}{{end}}
+</p>
+{{if .Grid}}
+<form method="post" action="/standby" class="stack">
+  <section class="card">
+    <h2>Planning</h2>
+    <label class="check"><input type="checkbox" name="use_planning" value="1"{{if .Cfg.UsePlanning}} checked{{end}}> Activer le planning</label>
+    <label>Pendant les créneaux cochés
+      <select name="planning_mode">{{range .Modes}}<option value="{{.Value}}"{{if .Current}} selected{{end}}>{{.Label}}</option>{{end}}</select>
+    </label>
+    <p class="hint">Coche les créneaux pendant lesquels la box doit être coupée. Chaque colonne est une heure, découpée en {{.Cfg.PerHour}} case(s).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Jour</th>{{range (index .Grid 0).Hours}}<th>{{.Label}}h</th>{{end}}</tr></thead>
+        <tbody>
+        {{range .Grid}}
+          <tr>
+            <th scope="row">{{.Name}}</th>
+            {{range .Hours}}<td>{{range .Slots}}<input type="checkbox" name="slot" value="{{.Index}}" aria-label="{{.Name}}"{{if .On}} checked{{end}}>{{end}}</td>{{end}}
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Enregistrer</h2>
+    <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un planning actif coupe le Wi-Fi (ou met la box en veille) pendant les créneaux cochés.</label>
+    <p class="hint">Obligatoire si le planning est activé et qu'au moins un créneau est coché.</p>
+    <div class="actions"><button>Enregistrer</button></div>
+  </section>
+</form>
+{{else}}<p class="empty">La box n'a pas renvoyé de planning exploitable.</p>{{end}}
+{{end}}
+{{end}}

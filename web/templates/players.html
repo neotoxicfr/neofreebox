@@ -1,0 +1,44 @@
+{{define "title"}}Players · neofreebox{{end}}
+{{define "content"}}
+<h1>Players</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+{{if .Players}}
+<div class="grid">
+{{range .Players}}
+  <section class="card">
+    <h2>{{or .DeviceName "Player sans nom"}}</h2>
+    <p><span class="badge {{if .Reachable}}on{{else}}off{{end}}">{{if .Reachable}}joignable{{else}}injoignable{{end}}</span>
+      {{with .Status}}<span class="badge">{{.Power}}</span>{{end}}</p>
+    <dl>
+      <dt>Modèle</dt><dd>{{or .DeviceModel .STBType}}</dd>
+      <dt>MAC</dt><dd class="mono">{{.MAC}}</dd>
+      {{if .LastReach}}<dt>Dernière activité</dt><dd>{{date .LastReach}}</dd>{{end}}
+    </dl>
+    {{if .Controllable}}
+    <div class="actions section">
+      {{$id := .ID}}
+      <form method="post" action="/players/{{$id}}/control"><button class="ghost small" name="cmd" value="prev">Précédent</button></form>
+      <form method="post" action="/players/{{$id}}/control"><button class="ghost small" name="cmd" value="play_pause">Lecture / pause</button></form>
+      <form method="post" action="/players/{{$id}}/control"><button class="ghost small" name="cmd" value="stop">Stop</button></form>
+      <form method="post" action="/players/{{$id}}/control"><button class="ghost small" name="cmd" value="next">Suivant</button></form>
+    </div>
+    {{with .Volume}}
+    <form method="post" action="/players/{{$id}}/volume" class="row section">
+      <label class="grow">Volume (0 à 100)<input type="number" name="volume" min="0" max="100" value="{{.Volume}}"></label>
+      <label class="check"><input type="checkbox" name="mute" value="1"{{if .Mute}} checked{{end}}> Muet</label>
+      <button class="small">Appliquer</button>
+    </form>
+    {{end}}
+    <form method="post" action="/players/{{$id}}/open" class="row section">
+      <label class="grow">Ouvrir une adresse<input name="url" placeholder="tv:?channel=2" required></label>
+      <button class="small">Ouvrir</button>
+    </form>
+    {{else}}
+    <p class="hint">La box ne relaie pas de commandes à ce player (éteint, ou API indisponible).</p>
+    {{end}}
+  </section>
+{{end}}
+</div>
+{{else}}<p class="empty">Aucun player détecté sur le réseau.</p>{{end}}
+{{end}}
+{{end}}
