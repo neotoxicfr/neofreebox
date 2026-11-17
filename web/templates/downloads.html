@@ -1,0 +1,443 @@
+{{define "title"}}Téléchargements · neofreebox{{end}}
+{{define "content"}}
+{{if .Detail}}
+<p><a href="/downloads">← Téléchargements</a></p>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+{{with .Task}}
+<h1>{{.Name}}</h1>
+<section class="card section">
+  <div class="row">
+    <span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StatusLabel}}</span>
+    <span class="muted">{{.Type}} · {{bytes .Size}}</span>
+  </div>
+  <progress max="100" value="{{.Pct}}">{{.Pct}} %</progress> {{.Pct}} %
+  <dl>
+    <dt>Reçu</dt><dd>{{bytes .RxBytes}} ({{bits .RxRate}} actuellement)</dd>
+    <dt>Envoyé</dt><dd>{{bytes .TxBytes}} ({{bits .TxRate}} actuellement){{if .IsBT}} · ratio {{.Ratio}}{{end}}</dd>
+    {{if gt .ETA 0}}<dt>Temps restant</dt><dd>{{since .ETA}}</dd>{{end}}
+    <dt>Dossier</dt><dd class="mono">{{.Dir}}</dd>
+    <dt>Ajouté le</dt><dd>{{date .CreatedTS}}</dd>
+    <dt>Priorité</dt><dd>{{.IOPriority}}</dd>
+    {{if .IsBT}}<dt>Empreinte</dt><dd class="mono">{{.InfoHash}}</dd>{{end}}
+    {{if and .Error (ne .Error "none")}}<dt>Erreur</dt><dd class="error">{{.Error}}</dd>{{end}}
+  </dl>
+  <div class="actions">
+    {{if .Active}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="back" value="detail"><input type="hidden" name="status" value="stopped"><button class="ghost small">Pause</button></form>{{end}}
+    {{if .CanResume}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="back" value="detail"><input type="hidden" name="status" value="downloading"><button class="small">Reprendre</button></form>{{end}}
+    {{if .CanRetry}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="back" value="detail"><input type="hidden" name="status" value="retry"><button class="small">Réessayer</button></form>{{end}}
+    {{if .CanSeed}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="back" value="detail"><input type="hidden" name="status" value="seeding"><button class="ghost small">Partager</button></form>{{end}}
+    <form method="post" action="/downloads/{{.ID}}/priority" class="row">
+      <input type="hidden" name="back" value="detail">
+      <label>Priorité
+        <select name="io_priority">
+          <option value="low"{{if eq .IOPriority "low"}} selected{{end}}>Basse</option>
+          <option value="normal"{{if eq .IOPriority "normal"}} selected{{end}}>Normale</option>
+          <option value="high"{{if eq .IOPriority "high"}} selected{{end}}>Haute</option>
+        </select>
+      </label>
+      <button class="ghost small">Appliquer</button>
+    </form>
+  </div>
+</section>
+
+<section class="card section">
+  <h2>Fichiers</h2>
+  {{if $.FilesErr}}<p class="error">{{$.FilesErr}}</p>{{else if $.Files}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Nom</th><th>Taille</th><th>Reçu</th><th>État</th><th>Priorité</th></tr></thead>
+    <tbody>
+    {{range $.Files}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td data-label="Taille">{{bytes .Size}}</td>
+      <td data-label="Reçu">{{bytes .Rx}}</td>
+      <td data-label="État">{{.Status}}{{if and .Error (ne .Error "none")}} ({{.Error}}){{end}}</td>
+      <td data-label="Priorité">
+        <form method="post" action="/downloads/{{$.Task.ID}}/file" class="row">
+          <input type="hidden" name="file" value="{{.ID}}">
+          <select name="priority" aria-label="Priorité de {{.Name}}">
+            <option value="no_dl"{{if eq .Priority "no_dl"}} selected{{end}}>Ignorer</option>
+            <option value="low"{{if eq .Priority "low"}} selected{{end}}>Basse</option>
+            <option value="normal"{{if eq .Priority "normal"}} selected{{end}}>Normale</option>
+            <option value="high"{{if eq .Priority "high"}} selected{{end}}>Haute</option>
+          </select>
+          <button class="ghost small">OK</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun fichier.</p>{{end}}
+</section>
+
+{{if .IsBT}}
+<section class="card section">
+  <h2>Trackers</h2>
+  {{if $.TrackersErr}}<p class="error">{{$.TrackersErr}}</p>{{else if $.Trackers}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Adresse</th><th>État</th><th>Sources</th><th>Sangsues</th><th>Prochaine annonce</th></tr></thead>
+    <tbody>
+    {{range $.Trackers}}
+    <tr>
+      <td class="mono">{{.Announce}}{{if .IsBackup}} <span class="muted">(secours)</span>{{end}}</td>
+      <td data-label="État">{{.Status}}{{if not .IsEnabled}} · désactivé{{end}}</td>
+      <td data-label="Sources">{{.NSeeders}}</td>
+      <td data-label="Sangsues">{{.NLeechers}}</td>
+      <td data-label="Prochaine annonce">{{since .ReannounceIn}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun tracker.</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter un tracker</summary>
+    <form method="post" action="/downloads/{{.ID}}/tracker" class="row">
+      <label class="grow">Adresse d'annonce<input name="announce" placeholder="udp://tracker.example.org:80" required></label>
+      <button class="small">Ajouter</button>
+    </form>
+  </details>
+</section>
+
+<section class="card section">
+  <h2>Pairs</h2>
+  {{if $.PeersErr}}<p class="error">{{$.PeersErr}}</p>{{else if $.Peers}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Adresse</th><th>Client</th><th>Origine</th><th>État</th><th>Avancement</th><th>Reçu</th><th>Envoyé</th></tr></thead>
+    <tbody>
+    {{range $.Peers}}
+    <tr>
+      <td class="mono">{{.Host}}:{{.Port}} <span class="muted">{{.CountryCode}}</span></td>
+      <td data-label="Client">{{.Client}}</td>
+      <td data-label="Origine">{{.Origin}}</td>
+      <td data-label="État">{{.State}}</td>
+      <td data-label="Avancement">{{.Progress}} %</td>
+      <td data-label="Reçu">{{bytes .Rx}} · {{bits .RxRate}}</td>
+      <td data-label="Envoyé">{{bytes .Tx}} · {{bits .TxRate}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun pair connecté.</p>{{end}}
+</section>
+
+<section class="card section">
+  <h2>Pièces</h2>
+  {{if $.PiecesTotal}}
+  <p class="muted">{{$.PiecesDone}} pièces terminées sur {{$.PiecesTotal}}. X : terminée, . : attendue, - : ignorée.</p>
+  <details>
+    <summary class="ghost-btn">Afficher la carte des pièces</summary>
+    <p class="mono">{{$.Pieces}}</p>
+  </details>
+  {{else}}<p class="empty">Pas de carte des pièces.</p>{{end}}
+</section>
+
+<section class="card section">
+  <h2>Liste noire</h2>
+  {{if $.BlackErr}}<p class="error">{{$.BlackErr}}</p>{{else if $.Blacklist}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Adresse</th><th>Raison</th><th>Expire dans</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range $.Blacklist}}
+    <tr>
+      <td class="mono">{{.Host}}{{if .Global}} <span class="muted">(global)</span>{{end}}</td>
+      <td data-label="Raison">{{.Reason}}</td>
+      <td data-label="Expire dans">{{since .Expire}}</td>
+      <td><form method="post" action="/downloads/{{$.Task.ID}}/unblock"><input type="hidden" name="host" value="{{.Host}}"><button class="ghost small">Débloquer</button></form></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <form method="post" action="/downloads/{{.ID}}/clear-blacklist"><button class="ghost small">Vider la liste noire</button></form>
+  {{else}}<p class="empty">Aucun pair bloqué.</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Bloquer un pair</summary>
+    <form method="post" action="/downloads/{{.ID}}/block" class="row">
+      <label class="grow">Adresse IP<input name="host" required></label>
+      <label>Durée (secondes)<input type="number" name="expire" value="3600" min="1" required></label>
+      <button class="small">Bloquer</button>
+    </form>
+  </details>
+</section>
+{{end}}
+
+{{if $.Log}}
+<section class="card section">
+  <details>
+    <summary class="ghost-btn">Journal</summary>
+    <pre class="code">{{$.Log}}</pre>
+  </details>
+</section>
+{{end}}
+{{end}}
+{{end}}
+
+{{else if .FeedView}}
+<p><a href="/downloads">← Téléchargements</a></p>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<h1>{{or .Feed.Title .Feed.URL}}</h1>
+<section class="card section">
+  <p class="muted mono">{{.Feed.URL}}</p>
+  <form method="post" action="/downloads/feeds/{{.Feed.ID}}/read"><button class="ghost small">Tout marquer comme lu</button></form>
+  {{if .Items}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Titre</th><th>Publié le</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Items}}
+    <tr>
+      <td>{{.Title}}{{if .Author}} <span class="muted">· {{.Author}}</span>{{end}}</td>
+      <td data-label="Publié le">{{date .PubTS}}</td>
+      <td data-label="État">{{if .IsDownloaded}}téléchargé{{else if .IsRead}}lu{{else}}nouveau{{end}}</td>
+      <td>
+        <div class="actions">
+          {{if not .IsDownloaded}}<form method="post" action="/downloads/feeds/{{$.Feed.ID}}/items/{{.ID}}/download"><button class="small">Télécharger</button></form>{{end}}
+          <form method="post" action="/downloads/feeds/{{$.Feed.ID}}/items/{{.ID}}/read">
+            {{if .IsRead}}<button class="ghost small">Marquer non lu</button>{{else}}<input type="hidden" name="read" value="1"><button class="ghost small">Marquer lu</button>{{end}}
+          </form>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun élément dans ce flux.</p>{{end}}
+</section>
+{{end}}
+
+{{else}}
+<h1>Téléchargements</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+
+<section class="card section">
+  <h2>Ajouter</h2>
+  <form method="post" action="/downloads/add" class="stack">
+    <label>Adresses (une par ligne : http, https, ftp ou magnet)<textarea name="urls" rows="3" required></textarea></label>
+    <label>Dossier de destination (facultatif)<input name="dir" placeholder="{{if .Config.DownloadDir}}{{.Config.Dir}}{{else}}/Disque dur/Téléchargements/{{end}}"></label>
+    <label class="check"><input type="checkbox" name="recursive" value="1"> Téléchargement récursif (suivre les liens d'une page)</label>
+    <div><button>Ajouter</button></div>
+  </form>
+  <p class="hint">L'envoi d'un fichier .torrent n'est pas encore pris en charge : colle son adresse ou un lien magnet.</p>
+</section>
+
+<section class="card table-wrap section">
+  <h2>File d'attente</h2>
+  {{if .Tasks}}
+  <table class="stack-sm">
+    <thead><tr><th>Nom</th><th>Avancement</th><th>Débit</th><th>Taille</th><th>Priorité</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Tasks}}
+    <tr>
+      <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StatusLabel}}</span> <a href="/downloads/{{.ID}}">{{.Name}}</a>{{if and .Error (ne .Error "none")}} <span class="error">({{.Error}})</span>{{end}}</td>
+      <td data-label="Avancement"><progress max="100" value="{{.Pct}}">{{.Pct}} %</progress> {{.Pct}} %{{if and (gt .ETA 0) (eq .Status "downloading")}} · {{since .ETA}}{{end}}</td>
+      <td data-label="Débit">↓ {{bits .RxRate}} · ↑ {{bits .TxRate}}</td>
+      <td data-label="Taille">{{bytes .Size}}</td>
+      <td data-label="Priorité">
+        <form method="post" action="/downloads/{{.ID}}/priority" class="row">
+          <select name="io_priority" aria-label="Priorité de {{.Name}}">
+            <option value="low"{{if eq .IOPriority "low"}} selected{{end}}>Basse</option>
+            <option value="normal"{{if eq .IOPriority "normal"}} selected{{end}}>Normale</option>
+            <option value="high"{{if eq .IOPriority "high"}} selected{{end}}>Haute</option>
+          </select>
+          <button class="ghost small">OK</button>
+        </form>
+      </td>
+      <td>
+        <div class="actions">
+          {{if .Active}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="stopped"><button class="ghost small">Pause</button></form>{{end}}
+          {{if .CanResume}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="downloading"><button class="small">Reprendre</button></form>{{end}}
+          {{if .CanRetry}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="retry"><button class="small">Réessayer</button></form>{{end}}
+          {{if .CanSeed}}<form method="post" action="/downloads/{{.ID}}/status"><input type="hidden" name="status" value="seeding"><button class="ghost small">Partager</button></form>{{end}}
+          <form method="post" action="/downloads/{{.ID}}/delete"><button class="ghost small">Retirer</button></form>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer les fichiers</summary>
+            <form method="post" action="/downloads/{{.ID}}/erase" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les fichiers téléchargés seront effacés définitivement.</label>
+              <button class="small danger">Supprimer avec les fichiers</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucun téléchargement.</p>{{end}}
+</section>
+
+<details class="card section">
+  <summary><h2>Statistiques et débit</h2></summary>
+  {{if .StatsErr}}<p class="error">{{.StatsErr}}</p>{{else}}
+  {{with .Stats}}
+  <dl>
+    <dt>Tâches</dt><dd>{{.NbTasks}} dont {{.Downloading}} en cours, {{.Seeding}} en partage, {{.Queued}} en attente, {{.Stopped}} en pause, {{.Done}} terminées, {{.Errors}} en erreur</dd>
+    <dt>Débit actuel</dt><dd>↓ {{bits .RxRate}} · ↑ {{bits .TxRate}}</dd>
+    <dt>Mode de débit</dt><dd>{{.Mode}}{{if .Scheduled}} (selon le planning){{else}} (forcé){{end}}</dd>
+    <dt>Connexion</dt><dd>{{if .ConnReady}}prête{{else}}non prête{{end}}</dd>
+    <dt>Pairs BitTorrent</dt><dd>{{.NbPeer}}{{if .Dht.Enabled}} · DHT : {{.Dht.Nodes}} nœuds{{end}}</dd>
+    <dt>Newsgroups</dt><dd>{{.Nzb.Status}}{{if and .Nzb.Error (ne .Nzb.Error "none")}} ({{.Nzb.Error}}){{end}}</dd>
+    <dt>Flux RSS</dt><dd>{{.NbRSS}} flux, {{.RSSUnread}} éléments non lus</dd>
+  </dl>
+  {{end}}
+  <form method="post" action="/downloads/throttling" class="row">
+    <label>Forcer le mode de débit
+      <select name="mode">
+        <option value="schedule"{{if .Stats.Scheduled}} selected{{end}}>Suivre le planning</option>
+        <option value="normal">Normal</option>
+        <option value="slow">Ralenti</option>
+        <option value="hibernate">Pause de tous les téléchargements</option>
+      </select>
+    </label>
+    <button class="small">Appliquer</button>
+  </form>
+  {{end}}
+</details>
+
+<details class="card section">
+  <summary><h2>Flux RSS</h2></summary>
+  {{if .FeedsErr}}<p class="error">{{.FeedsErr}}</p>{{else}}
+  {{if .Feeds}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Flux</th><th>Éléments</th><th>Dernière actualisation</th><th>Téléchargement auto</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Feeds}}
+    <tr>
+      <td><a href="/downloads/feeds/{{.ID}}">{{or .Title .URL}}</a>{{if and .Error (ne .Error "none")}} <span class="error">({{.Error}})</span>{{end}}<br><span class="muted mono">{{.URL}}</span></td>
+      <td data-label="Éléments">{{.NbUnread}} non lus / {{.Total}}</td>
+      <td data-label="Dernière actualisation">{{if .FetchTS}}{{date .FetchTS}}{{else}}jamais{{end}}</td>
+      <td data-label="Téléchargement auto">
+        <form method="post" action="/downloads/feeds/{{.ID}}/auto" class="row">
+          <label class="check"><input type="checkbox" name="auto" value="1"{{if .AutoDownload}} checked{{end}}> Activé</label>
+          <button class="ghost small">OK</button>
+        </form>
+      </td>
+      <td>
+        <div class="actions">
+          <form method="post" action="/downloads/feeds/{{.ID}}/fetch"><button class="ghost small">Actualiser</button></form>
+          <form method="post" action="/downloads/feeds/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <form method="post" action="/downloads/feeds/fetch"><button class="ghost small">Tout actualiser</button></form>
+  {{else}}<p class="empty">Aucun flux.</p>{{end}}
+  <form method="post" action="/downloads/feeds/add" class="row">
+    <label class="grow">Adresse d'un flux RSS<input type="url" name="url" placeholder="https://exemple.org/flux.xml" required></label>
+    <button class="small">Ajouter</button>
+  </form>
+  {{end}}
+</details>
+
+<details class="card section">
+  <summary><h2>Configuration</h2></summary>
+  {{if .ConfigErr}}<p class="error">{{.ConfigErr}}</p>{{else}}
+  {{with .Config}}
+  <form method="post" action="/downloads/config" class="stack">
+    <h3>Général</h3>
+    <div class="grid">
+      <label>Dossier de téléchargement<input name="download_dir" value="{{.Dir}}"></label>
+      <label>Téléchargements simultanés<input type="number" name="max_tasks" value="{{.MaxTasks}}" min="1"></label>
+      <label>DNS 1 (facultatif)<input name="dns1" value="{{.DNS1}}"></label>
+      <label>DNS 2 (facultatif)<input name="dns2" value="{{.DNS2}}"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="use_watch_dir" value="1"{{if .UseWatchDir}} checked{{end}}> Surveiller un dossier : les .torrent et .nzb qui y sont déposés sont ajoutés</label>
+    <label>Dossier surveillé<input name="watch_dir" value="{{.WatchPath}}"></label>
+
+    <h3>Débits</h3>
+    <p class="hint">En Ko/s ; 0 veut dire sans limite.</p>
+    <div class="grid">
+      <label>Normal, réception<input type="number" name="normal_rx" value="{{.Throttling.Normal.RxKo}}" min="0"></label>
+      <label>Normal, émission<input type="number" name="normal_tx" value="{{.Throttling.Normal.TxKo}}" min="0"></label>
+      <label>Ralenti, réception<input type="number" name="slow_rx" value="{{.Throttling.Slow.RxKo}}" min="0"></label>
+      <label>Ralenti, émission<input type="number" name="slow_tx" value="{{.Throttling.Slow.TxKo}}" min="0"></label>
+    </div>
+
+    <h3>BitTorrent</h3>
+    <div class="grid">
+      <label>Pairs maximum<input type="number" name="bt_max_peers" value="{{.BT.MaxPeers}}" min="0"></label>
+      <label>Ratio d'arrêt (150 = 1,5 ; 0 = jamais)<input type="number" name="bt_stop_ratio" value="{{.BT.StopRatio}}" min="0"></label>
+      <label>Chiffrement
+        <select name="bt_crypto">
+          <option value="unsupported"{{if eq .BT.Crypto "unsupported"}} selected{{end}}>Jamais</option>
+          <option value="allowed"{{if eq .BT.Crypto "allowed"}} selected{{end}}>Toléré</option>
+          <option value="preferred"{{if eq .BT.Crypto "preferred"}} selected{{end}}>Préféré</option>
+          <option value="required"{{if eq .BT.Crypto "required"}} selected{{end}}>Obligatoire</option>
+        </select>
+      </label>
+      <label>Délai d'annonce (s)<input type="number" name="bt_announce" value="{{.BT.AnnounceTimeout}}" min="0"></label>
+      <label>Port principal<input type="number" name="bt_port" value="{{.BT.MainPort}}" min="0" max="65535"></label>
+      <label>Port DHT<input type="number" name="bt_dht_port" value="{{.BT.DhtPort}}" min="0" max="65535"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="bt_dht" value="1"{{if .BT.EnableDHT}} checked{{end}}> Activer le DHT</label>
+    <label class="check"><input type="checkbox" name="bt_pex" value="1"{{if .BT.EnablePEX}} checked{{end}}> Activer l'échange de pairs (PEX)</label>
+
+    <h3>Newsgroups</h3>
+    <div class="grid">
+      <label>Serveur<input name="news_server" value="{{.News.Server}}"></label>
+      <label>Port<input type="number" name="news_port" value="{{.News.Port}}" min="0" max="65535"></label>
+      <label>Identifiant<input name="news_user" value="{{.News.User}}" autocomplete="off"></label>
+      <label>Mot de passe<input type="password" name="news_password" autocomplete="new-password" placeholder="Laisser vide pour ne pas le changer"></label>
+      <label>Connexions simultanées<input type="number" name="news_threads" value="{{.News.NThreads}}" min="1"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="news_ssl" value="1"{{if .News.SSL}} checked{{end}}> Connexion chiffrée (SSL)</label>
+    <label class="check"><input type="checkbox" name="news_repair" value="1"{{if .News.AutoRepair}} checked{{end}}> Vérifier et réparer avec les fichiers par2</label>
+    <label class="check"><input type="checkbox" name="news_lazy" value="1"{{if .News.LazyPar2}} checked{{end}}> Ne télécharger les par2 qu'en cas de besoin</label>
+    <label class="check"><input type="checkbox" name="news_extract" value="1"{{if .News.AutoExtract}} checked{{end}}> Extraire automatiquement les archives</label>
+    <label class="check"><input type="checkbox" name="news_erase" value="1"{{if .News.EraseTmp}} checked{{end}}> Effacer les archives après extraction</label>
+
+    <h3>Flux RSS</h3>
+    <div class="grid">
+      <label>Actualisation (minutes)<input type="number" name="feed_interval" value="{{.Feed.FetchInterval}}" min="1"></label>
+      <label>Éléments conservés par flux<input type="number" name="feed_max" value="{{.Feed.MaxItems}}" min="0"></label>
+    </div>
+    <div><button>Enregistrer</button></div>
+  </form>
+  {{end}}
+
+  <h3>Planning de bande passante</h3>
+  <p class="hint">Une ligne par jour, une colonne par heure (0 à 23). · : normal, L : ralenti, P : pause.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Jour</th>{{range $h := .Hours}}<th>{{$h}}</th>{{end}}</tr></thead>
+    <tbody>
+    {{range .Planning}}<tr><td>{{.Name}}</td>{{range .Slots}}<td>{{.}}</td>{{end}}</tr>{{end}}
+    </tbody>
+  </table>
+  </div>
+  <form method="post" action="/downloads/schedule" class="row">
+    <label>Jour
+      <select name="day">
+        <option value="-1">Tous les jours</option>
+        <option value="0">Lundi</option><option value="1">Mardi</option><option value="2">Mercredi</option>
+        <option value="3">Jeudi</option><option value="4">Vendredi</option><option value="5">Samedi</option><option value="6">Dimanche</option>
+      </select>
+    </label>
+    <label>De (heure)<input type="number" name="from" value="0" min="0" max="23" required></label>
+    <label>À (heure, exclue)<input type="number" name="to" value="24" min="1" max="24" required></label>
+    <label>Mode
+      <select name="mode">
+        <option value="normal">Normal</option>
+        <option value="slow">Ralenti</option>
+        <option value="hibernate">Pause</option>
+      </select>
+    </label>
+    <button class="small">Appliquer au créneau</button>
+  </form>
+  {{end}}
+</details>
+{{end}}
+{{end}}
+{{end}}
