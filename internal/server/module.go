@@ -122,7 +122,7 @@ func confirmed(w http.ResponseWriter, r *http.Request, back string) bool {
 	if r.PostFormValue("confirm") == "1" {
 		return true
 	}
-	setFlash(w, "err:Coche la case de confirmation : cette action peut couper le réseau.")
+	setFlash(w, "err:Coche la case de confirmation pour valider cette action.")
 	http.Redirect(w, r, back, http.StatusSeeOther)
 	return false
 }
