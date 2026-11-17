@@ -100,9 +100,9 @@ func TestSharesWrites(t *testing.T) {
 		form url.Values
 		want string
 	}{
-		{"/shares/samba", url.Values{"file_share": {"1"}, "workgroup": {"HOME"}, "logon_user": {"bob"}, "logon_password": {"s3cret pass"}},
+		{"/shares/samba", url.Values{"file_share": {"1"}, "workgroup": {"HOME"}, "logon_user": {"bob"}, "logon_password": {"s3cret pass"}, "confirm": {"1"}},
 			`PUT netshare/samba/ {"file_share_enabled":true,"logon_enabled":false,"logon_password":"s3cret pass","logon_user":"bob","print_share_enabled":false,"workgroup":"HOME"}`},
-		{"/shares/samba", url.Values{"file_share": {"1"}},
+		{"/shares/samba", url.Values{"file_share": {"1"}, "confirm": {"1"}},
 			`PUT netshare/samba/ {"file_share_enabled":true,"logon_enabled":false,"print_share_enabled":false}`},
 		{"/shares/samba/smb", url.Values{"smbv2": {"1"}}, `PUT netshare/samba/ {"smbv2_enabled":true}`},
 		{"/shares/samba/smb", url.Values{"confirm": {"1"}}, `PUT netshare/samba/ {"smbv2_enabled":false}`},
@@ -111,7 +111,7 @@ func TestSharesWrites(t *testing.T) {
 		{"/shares/ftp", url.Values{"enabled": {"1"}}, `PUT ftp/config/ {"enabled":true}`},
 		{"/shares/ftp/exposure", url.Values{"confirm": {"1"}, "remote": {"1"}, "anonymous": {"1"}, "anonymous_write": {"1"}, "port_ctrl": {"2121"}},
 			`PUT ftp/config/ {"allow_anonymous":true,"allow_anonymous_write":true,"allow_remote_access":true,"port_ctrl":2121}`},
-		{"/shares/tftp", url.Values{"enabled": {"1"}, "root": {"/Freebox/tftp"}}, `PUT tftp/config/ {"enabled":true,"root":"L0ZyZWVib3gvdGZ0cA=="}`},
+		{"/shares/tftp", url.Values{"enabled": {"1"}, "root": {"/Freebox/tftp"}, "confirm": {"1"}}, `PUT tftp/config/ {"enabled":true,"root":"L0ZyZWVib3gvdGZ0cA=="}`},
 		{"/shares/upnpav", url.Values{"enabled": {"1"}}, `PUT upnpav/config/ {"enabled":true}`},
 		{"/shares/airmedia", url.Values{"enabled": {"1"}, "password": {"3615"}}, `PUT airmedia/config/ {"enabled":true,"password":"3615"}`},
 	}
@@ -138,8 +138,13 @@ func TestSharesRefusals(t *testing.T) {
 		{"/shares/samba/smb", url.Values{}},                                            // SMBv1 without confirmation
 		{"/shares/ftp/exposure", url.Values{"remote": {"1"}}},                          // exposure without confirmation
 		{"/shares/ftp/exposure", url.Values{"confirm": {"1"}, "port_ctrl": {"70000"}}}, // bad port
-		{"/shares/tftp", url.Values{"root": {"relative"}}},                             // not absolute
-		{"/shares/afp", url.Values{"server_type": {"toaster"}}},                        // unknown type
+		{"/shares/tftp", url.Values{"root": {"relative"}}},
+		{"/shares/tftp", url.Values{"root": {"/"}}},                                                     // whole disk
+		{"/shares/tftp", url.Values{"root": {"/Freebox/../etc"}}},                                       // not clean
+		{"/shares/tftp", url.Values{"enabled": {"1"}, "root": {"/Freebox/tftp"}}},                       // no confirm
+		{"/shares/samba", url.Values{"file_share": {"1"}}},                                              // open share, no confirm
+		{"/shares/afp", url.Values{"enabled": {"1"}, "guest_allow": {"1"}, "server_type": {"macmini"}}}, // guests, no confirm                             // not absolute
+		{"/shares/afp", url.Values{"server_type": {"toaster"}}},                                         // unknown type
 	} {
 		post(t, c, srv, tc.path, tc.form)
 	}

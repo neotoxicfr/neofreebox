@@ -14,7 +14,8 @@
     <label>Groupe de travail<input name="workgroup" value="{{.Samba.Workgroup}}" maxlength="15"></label>
     <label>Utilisateur<input name="logon_user" value="{{.Samba.LogonUser}}" autocomplete="off"></label>
     <label>Nouveau mot de passe<input type="password" name="logon_password" autocomplete="new-password" placeholder="Inchangé"></label>
-    <div class="actions"><button>Enregistrer</button></div>
+    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un partage sans identifiant est ouvert à tous les appareils du réseau (case requise dans ce cas).</label>
+    <button>Enregistrer</button></div>
   </form>
   <h3>Protocole</h3>
   {{if .Samba.SMBv2}}
@@ -39,7 +40,8 @@
     <label>Icône dans le Finder
       <select name="server_type">{{$cur := .Afp.ServerType}}{{range .AfpTypes}}<option value="{{.}}"{{if eq . $cur}} selected{{end}}>{{.}}</option>{{end}}</select>
     </label>
-    <div class="actions"><button>Enregistrer</button></div>
+    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'accès invité ouvre le partage à tous les appareils du réseau (case requise dans ce cas).</label>
+    <button>Enregistrer</button></div>
   </form>
 </section>
 
@@ -72,7 +74,8 @@
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Tftp.Enabled}} checked{{end}}> Activer le serveur TFTP</label>
     <label>Dossier racine<input name="root" value="{{.Tftp.Path}}" class="mono" required placeholder="/Freebox/tftp"></label>
     <p class="hint">Chemin absolu d'un dossier du disque de la box.</p>
-    <div class="actions"><button>Enregistrer</button></div>
+    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que le TFTP n'a pas de mot de passe : tout le dossier est lisible sur le réseau (case requise pour activer).</label>
+    <button>Enregistrer</button></div>
   </form>
 </section>
 
