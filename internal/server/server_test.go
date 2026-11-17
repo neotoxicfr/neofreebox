@@ -32,6 +32,19 @@ func (f fakeBox) Get(_ context.Context, path string, out any) error {
 	return json.Unmarshal([]byte(body), out)
 }
 
+func (f fakeBox) Do(ctx context.Context, method, path string, in, out any) error {
+	if method == http.MethodGet {
+		return f.Get(ctx, path, out)
+	}
+	if f.err != nil {
+		return f.err
+	}
+	if out != nil {
+		return json.Unmarshal([]byte(`{"done":true}`), out)
+	}
+	return nil
+}
+
 func (f fakeBox) Permissions(context.Context) (map[string]bool, error) {
 	return map[string]bool{"settings": true, "calls": true, "vm": false}, f.err
 }

@@ -7,19 +7,30 @@
 <title>{{block "title" .}}neofreebox{{end}}</title>
 <link rel="stylesheet" href="/static/app.css?v={{version}}">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<script src="/static/app.js?v={{version}}" defer></script>
 </head>
-<body>
+<body{{if .Nav}} class="app"{{end}}>
 {{if .Nav}}
-<header class="bar">
+<header class="top">
+  <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="24" height="24">neofreebox</a>
+  <details class="menu-toggle"><summary>Menu</summary></details>
+</header>
+<aside class="side" id="menu">
   <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="24" height="24">neofreebox</a>
   <nav aria-label="Principale">
-    <a href="/"{{if eq .Nav "status"}} aria-current="page"{{end}}>État</a>
-    <a href="/account"{{if eq .Nav "account"}} aria-current="page"{{end}}>Compte</a>
+  {{range .Menu}}
+    <p class="group">{{.Name}}</p>
+    <ul>{{range .Items}}<li><a href="{{.Href}}"{{if eq $.Nav .Slug}} aria-current="page"{{end}}>{{.Title}}</a></li>{{end}}</ul>
+  {{end}}
   </nav>
-  <form method="post" action="/logout"><button class="ghost">Se déconnecter</button></form>
-</header>
+  <div class="side-foot">
+    <a href="/account"{{if eq .Nav "account"}} aria-current="page"{{end}}>Compte</a>
+    <form method="post" action="/logout"><button class="ghost small">Se déconnecter</button></form>
+  </div>
+</aside>
 {{end}}
 <main{{if not .Nav}} class="narrow"{{end}}>
+{{with .Flash}}<p class="{{if .Ok}}ok{{else}}error{{end}}" role="{{if .Ok}}status{{else}}alert{{end}}">{{.Text}}</p>{{end}}
 {{block "content" .}}{{end}}
 </main>
 </body>

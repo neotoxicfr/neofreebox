@@ -1,0 +1,42 @@
+{{define "title"}}Appareils · neofreebox{{end}}
+{{define "content"}}
+<h1>Appareils</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">{{.Active}} connectés sur {{.Total}} vus par la box.</p>
+<form method="get" action="/devices" class="row">
+  <label class="grow">Rechercher<input type="search" name="q" value="{{.Q}}" placeholder="Nom, IP, MAC, fabricant"></label>
+  <label class="check"><input type="checkbox" name="all" value="1"{{if .All}} checked{{end}}> Inclure les déconnectés</label>
+  <button class="ghost">Filtrer</button>
+</form>
+<div class="card table-wrap section">
+{{if .Hosts}}
+<table class="stack-sm">
+  <thead><tr><th>Nom</th><th>IPv4</th><th>MAC</th><th>Lien</th><th>Fabricant</th><th><span class="sr-only">Actions</span></th></tr></thead>
+  <tbody>
+  {{range .Hosts}}
+  <tr>
+    <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{if .Active}}actif{{else}}absent{{end}}</span> {{or .PrimaryName .VendorName "Sans nom"}}</td>
+    <td class="mono" data-label="IPv4">{{.IPv4}}</td>
+    <td class="mono" data-label="MAC">{{.L2Ident.ID}}</td>
+    <td data-label="Lien">{{.Link}}</td>
+    <td data-label="Fabricant">{{.VendorName}}</td>
+    <td>
+      <div class="actions">
+        <details class="inline">
+          <summary class="ghost-btn">Renommer</summary>
+          <form method="post" action="/devices/{{.ID}}/rename" class="row">
+            <label class="grow">Nouveau nom<input name="name" value="{{.PrimaryName}}" required maxlength="64"></label>
+            <button class="small">Enregistrer</button>
+          </form>
+        </details>
+        {{if not .Active}}<form method="post" action="/devices/{{.ID}}/wake"><button class="ghost small">Réveiller</button></form>{{end}}
+      </div>
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="empty">Aucun appareil ne correspond.</p>{{end}}
+</div>
+{{end}}
+{{end}}

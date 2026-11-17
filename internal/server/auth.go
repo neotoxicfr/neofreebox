@@ -89,14 +89,16 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func (s *Server) accountPage(w http.ResponseWriter, _ *http.Request) {
-	s.render(w, http.StatusOK, "account", map[string]any{"Nav": "account", "Username": s.account.Username})
+func (s *Server) accountPage(w http.ResponseWriter, r *http.Request) {
+	data := s.accountData()
+	data["Flash"] = takeFlash(w, r)
+	s.render(w, http.StatusOK, "account", data)
 }
 
 func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxForm)
 	cur, pass, confirm := r.PostFormValue("current"), r.PostFormValue("password"), r.PostFormValue("confirm")
-	data := map[string]any{"Nav": "account", "Username": s.account.Username}
+	data := s.accountData()
 	if !s.limiter.allow() {
 		data["Error"] = "Trop d'essais. Réessaie dans quelques minutes."
 		s.render(w, http.StatusTooManyRequests, "account", data)
@@ -165,4 +167,37 @@ func (s *Server) startSession(w http.ResponseWriter) {
 		Name: cookieName, Value: s.sessions.create(), Path: "/",
 		MaxAge: int(sessionTTL.Seconds()), Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func (s *Server) accountData() map[string]any {
+	return map[string]any{"Nav": "account", "Username": s.account.Username, "Tokens": s.tokens.all()}
+}
+
+func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
+	name := formStr(r, "name")
+	if name == "" || utf8.RuneCountInString(name) > 64 {
+		setFlash(w, "err:Donne un nom au jeton (64 caractères au plus).")
+		http.Redirect(w, r, "/account", http.StatusSeeOther)
+		return
+	}
+	tok, err := s.tokens.create(name)
+	if err != nil {
+		s.log.Error("create token", "err", err)
+		http.Error(w, "Erreur interne", http.StatusInternalServerError)
+		return
+	}
+	s.log.Info("api token created", "name", name)
+	data := s.accountData()
+	data["NewToken"] = tok
+	s.render(w, http.StatusOK, "account", data)
+}
+
+func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
+	if err := s.tokens.revoke(r.PathValue("id")); err != nil {
+		s.log.Error("revoke token", "err", err)
+		setFlash(w, "err:"+err.Error())
+	} else {
+		setFlash(w, "ok:Jeton révoqué.")
+	}
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }

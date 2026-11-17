@@ -36,6 +36,12 @@ type connection struct {
 	BandwidthDown int64  `json:"bandwidth_down"` // bit/s
 }
 
+func init() {
+	register(module{Slug: "status", Title: "État", Group: "Freebox", Order: 0, Routes: func(s *Server, mux *http.ServeMux) {
+		s.page(mux, "GET /{$}", s.status)
+	}})
+}
+
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
@@ -82,6 +88,20 @@ func bits(v int64) string {
 		return fmt.Sprintf("%.0f kb/s", float64(v)/1e3)
 	}
 	return fmt.Sprintf("%d b/s", v)
+}
+
+// byteSize formats a size in bytes, in French units (Ko, Mo…).
+func byteSize(v int64) string {
+	const unit = 1024
+	if v < unit {
+		return fmt.Sprintf("%d o", v)
+	}
+	div, exp := int64(unit), 0
+	for n := v / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %co", float64(v)/float64(div), "KMGTPE"[exp])
 }
 
 func duration(d time.Duration) string {

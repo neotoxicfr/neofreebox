@@ -27,6 +27,7 @@ const (
 // Box is what the pages need from the box.
 type Box interface {
 	Get(ctx context.Context, path string, out any) error
+	Do(ctx context.Context, method, path string, in, out any) error
 	Permissions(ctx context.Context) (map[string]bool, error)
 }
 
@@ -36,6 +37,7 @@ var _ Box = (*fbx.Client)(nil)
 type Server struct {
 	box      Box
 	account  *account
+	tokens   *tokenStore
 	sessions *sessions
 	limiter  *limiter
 	pages    map[string]*template.Template
@@ -51,6 +53,10 @@ func New(box Box, dataDir string, log *slog.Logger) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	tokens, err := loadTokens(dataDir)
+	if err != nil {
+		return nil, err
+	}
 	pages, err := parsePages()
 	if err != nil {
 		return nil, err
@@ -58,6 +64,7 @@ func New(box Box, dataDir string, log *slog.Logger) (*Server, error) {
 	s := &Server{
 		box:      box,
 		account:  acct,
+		tokens:   tokens,
 		sessions: newSessions(sessionTTL),
 		limiter:  &limiter{max: 10, window: 15 * time.Minute},
 		pages:    pages,
@@ -71,7 +78,13 @@ func New(box Box, dataDir string, log *slog.Logger) (*Server, error) {
 }
 
 func parsePages() (map[string]*template.Template, error) {
-	funcs := template.FuncMap{"version": func() string { return Version }}
+	funcs := template.FuncMap{
+		"version": func() string { return Version },
+		"bits":    bits,
+		"bytes":   byteSize,
+		"since":   func(sec int64) string { return duration(time.Duration(sec) * time.Second) },
+		"date":    func(unix int64) string { return time.Unix(unix, 0).Format("02/01/2006 15:04") },
+	}
 	names, err := fs.Glob(web.Templates, "templates/*.html")
 	if err != nil {
 		return nil, err
@@ -100,9 +113,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /login", s.loginPage)
 	mux.HandleFunc("POST /login", s.login)
 	mux.HandleFunc("POST /logout", s.logout)
-	mux.Handle("GET /{$}", s.guard(s.status))
 	mux.Handle("GET /account", s.guard(s.accountPage))
 	mux.Handle("POST /account", s.guard(s.changePassword))
+	mux.Handle("POST /account/tokens", s.guard(s.createToken))
+	mux.Handle("POST /account/tokens/{id}/revoke", s.guard(s.revokeToken))
+	for _, g := range menu() {
+		for _, m := range g.Items {
+			m.Routes(s, mux)
+		}
+	}
+	mux.Handle("GET /api/v1/ops", s.bearer(http.HandlerFunc(s.apiList)))
+	mux.Handle("POST /api/v1/ops/{name}", s.bearer(http.HandlerFunc(s.apiCall)))
+	mux.Handle("/mcp", s.bearer(s.mcpHandler()))
 	return headers(http.NewCrossOriginProtection().Handler(mux))
 }
 
@@ -129,6 +151,9 @@ func (s *Server) guard(next http.HandlerFunc) http.Handler {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
+		if r.Method == http.MethodPost && !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+			r.Body = http.MaxBytesReader(w, r.Body, maxForm)
+		}
 		next(w, r)
 	})
 }
@@ -136,6 +161,10 @@ func (s *Server) guard(next http.HandlerFunc) http.Handler {
 // render executes a page into a buffer first, so a template error becomes a
 // clean 500 instead of half a page.
 func (s *Server) render(w http.ResponseWriter, status int, page string, data map[string]any) {
+	if data == nil {
+		data = map[string]any{}
+	}
+	data["Menu"] = menu()
 	var buf bytes.Buffer
 	if err := s.pages[page].Execute(&buf, data); err != nil {
 		s.log.Error("render", "page", page, "err", err)

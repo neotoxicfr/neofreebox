@@ -2,7 +2,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -30,6 +32,7 @@ const usage = `usage: neofreebox <command>
   serve          run the web interface
   pair -o FILE   ask the box for an app token (confirm on the box), save it to FILE
   check          open a session with the token and print the box and its rights
+  get PATH       print the JSON result of GET /api/v16/PATH (read-only, for debugging)
   healthcheck    exit 0 if the local server answers (for the container)
 
 Environment:
@@ -54,6 +57,8 @@ func main() {
 		err = pair(ctx, os.Args[2:])
 	case "check":
 		err = check(ctx)
+	case "get":
+		err = get(ctx, os.Args[2:])
 	case "healthcheck":
 		err = healthcheck(ctx)
 	default:
@@ -175,6 +180,27 @@ func serve(ctx context.Context) error {
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	return nil
+}
+
+func get(ctx context.Context, args []string) error {
+	if len(args) != 1 {
+		return errors.New("get: one API path expected, e.g. lan/browser/pub/")
+	}
+	c, err := client()
+	if err != nil {
+		return fmt.Errorf("get: %w", err)
+	}
+	defer func() { _ = c.Logout(context.WithoutCancel(ctx)) }()
+	var out json.RawMessage
+	if err := c.Get(ctx, args[0], &out); err != nil {
+		return fmt.Errorf("get: %w", err)
+	}
+	var pretty bytes.Buffer
+	if json.Indent(&pretty, out, "", "  ") != nil {
+		pretty.Write(out)
+	}
+	fmt.Println(pretty.String())
 	return nil
 }
 
