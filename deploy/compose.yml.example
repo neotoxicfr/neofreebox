@@ -14,7 +14,7 @@ services:
     environment:
       NEOFREEBOX_APP_TOKEN_FILE: /run/secrets/freebox_app_token
       # NEOFREEBOX_BOX_URL: https://mafreebox.freebox.fr
-      # NEOFREEBOX_READ_ONLY: "1"   # refuse toute écriture vers la box (démonstration)
+      # NEOFREEBOX_READ_ONLY: "true"   # refuse toute écriture vers la box (démonstration, audit)
     secrets:
       - freebox_app_token
     volumes:

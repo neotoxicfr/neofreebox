@@ -33,7 +33,7 @@ dans une petite application que tu fais tourner sur ton propre serveur.
 > [!WARNING]
 > **Version préliminaire.** Toutes les sections de Freebox OS sont couvertes,
 > mais toutes les écritures n'ont pas encore été essayées sur une vraie box.
-> Le mode lecture seule (`NEOFREEBOX_READ_ONLY=1`) permet de tout parcourir sans risque.
+> Le mode lecture seule (`NEOFREEBOX_READ_ONLY=true`) permet de tout parcourir sans risque.
 
 ## Pourquoi neofreebox
 
@@ -144,7 +144,8 @@ fictives, aucune box n'est contactée et les modifications sont sans effet.
 | `NEOFREEBOX_BOX_URL` | `https://mafreebox.freebox.fr` | adresse de la box |
 | `NEOFREEBOX_DATA_DIR` | `/data` dans l'image (`./data` sinon) | dossier du compte et des jetons d'API |
 | `NEOFREEBOX_ADDR` | `:8080` | adresse d'écoute |
-| `NEOFREEBOX_READ_ONLY` | — | `1` : refuse toute écriture vers la box (démonstration, essais) |
+| `NEOFREEBOX_READ_ONLY` | `false` | `true` : refuse toute écriture vers la box (démonstration, audit sur une vraie box) |
+| `NEOFREEBOX_DEMO` | `false` | `true` : fausse box intégrée, données fictives, compte `demo` / `demo-neofreebox` (rien n'est écrit dans le dossier de données) |
 
 ## Sécurité
 
