@@ -39,7 +39,12 @@ type Param struct {
 	Description string
 	Required    bool
 	Query       bool // sent as ?name=value instead of in the path
+	// Base64 marks a path parameter holding a base64 value, such as a file
+	// path for the fs/ API: it may contain "/" and is inserted as is.
+	Base64 bool
 }
+
+var base64Value = regexp.MustCompile(`^[A-Za-z0-9+/]+={0,2}$`)
 
 // Box is what an operation needs from the API client.
 type Box interface {
@@ -122,6 +127,11 @@ func Call(ctx context.Context, box Box, op Op, args map[string]any) (json.RawMes
 		}
 		if p.Query {
 			q.Set(p.Name, s)
+		} else if p.Base64 {
+			if !base64Value.MatchString(s) {
+				return nil, fmt.Errorf("argument %q: not base64", p.Name)
+			}
+			path = strings.ReplaceAll(path, "{"+p.Name+"}", s)
 		} else {
 			if s == "" || s == "." || s == ".." || strings.ContainsAny(s, "/\\") {
 				return nil, fmt.Errorf("argument %q: not a valid identifier", p.Name)

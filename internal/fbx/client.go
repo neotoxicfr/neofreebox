@@ -136,19 +136,19 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 // login endpoints.
 func (c *Client) call(ctx context.Context, method, path, session string, in, out any) error {
 	if !safePath(path) {
-		return fmt.Errorf("fbx: refusing path %q", path)
+		return fmt.Errorf("fbx: refusing path %q", Redact(path))
 	}
 	var body io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
 		if err != nil {
-			return fmt.Errorf("fbx: encode %s: %w", path, err)
+			return fmt.Errorf("fbx: encode %s: %w", Redact(path), err)
 		}
 		body = bytes.NewReader(b)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, c.base+"/"+strings.TrimLeft(path, "/"), body)
 	if err != nil {
-		return fmt.Errorf("fbx: %s %s: %w", method, path, err)
+		return fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
 	}
 	if in != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -158,23 +158,27 @@ func (c *Client) call(ctx context.Context, method, path, session string, in, out
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("fbx: %s %s: %w", method, path, err)
+		var uerr *url.Error
+		if errors.As(err, &uerr) {
+			err = uerr.Err // the URL it carries holds the identifiers
+		}
+		return fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
 	if err != nil {
-		return fmt.Errorf("fbx: read %s: %w", path, err)
+		return fmt.Errorf("fbx: read %s: %w", Redact(path), err)
 	}
 	var env envelope
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return &Error{Status: resp.StatusCode, Code: "bad_response", Msg: fmt.Sprintf("réponse illisible pour %s", path)}
+		return &Error{Status: resp.StatusCode, Code: "bad_response", Msg: fmt.Sprintf("réponse illisible pour %s", Redact(path))}
 	}
 	if !env.Success {
 		return &Error{Status: resp.StatusCode, Code: env.ErrorCode, Msg: env.Msg}
 	}
 	if out != nil && len(env.Result) > 0 {
 		if err := json.Unmarshal(env.Result, out); err != nil {
-			return fmt.Errorf("fbx: decode %s: %w", path, err)
+			return fmt.Errorf("fbx: decode %s: %w", Redact(path), err)
 		}
 	}
 	return nil
@@ -193,4 +197,19 @@ func safePath(path string) bool {
 		}
 	}
 	return true
+}
+
+// Redact keeps the shape of an API path but hides its identifiers (host
+// MACs, voicemail ids that carry phone numbers, base64 file paths): every
+// segment that is not a plain lowercase word becomes {id}. Errors and logs
+// use it, so they never carry personal data.
+func Redact(path string) string {
+	p, _, _ := strings.Cut(path, "?")
+	segs := strings.Split(p, "/")
+	for i, seg := range segs {
+		if strings.Trim(seg, "abcdefghijklmnopqrstuvwxyz_") != "" {
+			segs[i] = "{id}"
+		}
+	}
+	return strings.Join(segs, "/")
 }

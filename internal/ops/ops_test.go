@@ -32,3 +32,16 @@ func TestCallPathArguments(t *testing.T) {
 		t.Fatalf("dangerous without confirm: %v", err)
 	}
 }
+
+func TestCallBase64Argument(t *testing.T) {
+	op := Op{Name: "ls", Description: "ls", Path: "fs/ls/{path}", Params: []Param{{Name: "path", Base64: true}}}
+	b := &recBox{}
+	if _, err := Call(context.Background(), b, op, map[string]any{"path": "L0Rp/c3F1ZQ=="}); err != nil || b.path != "fs/ls/L0Rp/c3F1ZQ==" {
+		t.Fatalf("path = %q, err = %v", b.path, err)
+	}
+	for _, bad := range []string{"../x", "a b", "", "x%2F"} {
+		if _, err := Call(context.Background(), b, op, map[string]any{"path": bad}); err == nil {
+			t.Errorf("base64 %q accepted", bad)
+		}
+	}
+}

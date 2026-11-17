@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/neotoxicfr/neofreebox/internal/fbx"
 	"io"
 	"log/slog"
 	"net/http"
@@ -201,7 +202,7 @@ func TestRedact(t *testing.T) {
 		"fs/ls/L0Rpc3F1ZQ==?x=1":                   "fs/ls/{id}",
 		"dhcp/config/":                             "dhcp/config/",
 	} {
-		if got := redact(in); got != want {
+		if got := fbx.Redact(in); got != want {
 			t.Errorf("redact(%q) = %q, want %q", in, got, want)
 		}
 	}
