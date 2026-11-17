@@ -1,0 +1,39 @@
+{{define "title"}}Historiques · neofreebox{{end}}
+{{define "chart"}}
+<section class="card section">
+  <h2>{{.Title}}</h2>
+  {{if .Empty}}<p class="empty">Pas de données sur cette période.</p>{{else}}
+  {{$c := .}}
+  <svg viewBox="0 0 {{.W}} {{.H}}" width="100%" role="img" aria-label="{{.Desc}}" font-family="sans-serif" font-size="11" fill="currentColor">
+    {{range .YTicks}}
+    <line x1="{{$c.Left}}" x2="{{$c.Right}}" y1="{{.Pos}}" y2="{{.Pos}}" stroke="currentColor" stroke-opacity="0.2"/>
+    <text x="{{$c.Left}}" y="{{.Pos}}" dx="-6" dy="4" text-anchor="end">{{.Label}}</text>
+    {{end}}
+    {{range .XTicks}}
+    <text x="{{.Pos}}" y="{{$c.H}}" dy="-6" text-anchor="middle">{{.Label}}</text>
+    {{end}}
+    {{range .Series}}
+    <polyline points="{{.Points}}" fill="none" stroke="{{.Color}}" stroke-width="1.6" stroke-linejoin="round"/>
+    <rect x="{{.LegendX}}" y="6" width="16" height="4" fill="{{.Color}}"/>
+    <text x="{{.LegendX}}" y="14" dx="22">{{.Name}}</text>
+    {{end}}
+  </svg>
+  <dl>
+    {{range .Series}}<dt>{{.Name}}</dt><dd>dernière valeur {{.Last}}, maximum {{.Max}}</dd>{{end}}
+  </dl>
+  {{end}}
+</section>
+{{end}}
+{{define "content"}}
+<h1>Historiques</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<nav class="row" aria-label="Période">
+  {{range .Ranges}}<a class="ghost-btn"{{if eq $.Range .Key}} aria-current="true"{{end}} href="/graphs?range={{.Key}}">{{.Label}}</a>{{end}}
+</nav>
+{{range .Errors}}<p class="error" role="alert">{{.}}</p>{{end}}
+<div class="grid">
+{{range .Charts}}{{template "chart" .}}{{end}}
+</div>
+<p class="hint">Débits en bit/s ; la résolution baisse avec la période. Pas de courbe Wi-Fi : la box n'en tient pas d'historique.</p>
+{{end}}
+{{end}}

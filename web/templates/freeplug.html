@@ -1,0 +1,38 @@
+{{define "title"}}Freeplugs · neofreebox{{end}}
+{{define "content"}}
+<h1>Freeplugs</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+{{range .Networks}}
+<section class="card table-wrap section">
+  <h2>Réseau <span class="mono">{{.ID}}</span></h2>
+  <table class="stack-sm">
+    <thead><tr><th>Freeplug</th><th>Rôle</th><th>Réception</th><th>Émission</th><th>Port Ethernet</th><th>Inactif depuis</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Members}}
+    <tr>
+      <td><span class="badge {{if .HasNetwork}}on{{else}}off{{end}}">{{if .HasNetwork}}en ligne{{else}}hors réseau{{end}}</span> <span class="mono">{{.ID}}</span>{{if .Model}} <span class="muted">{{.Model}}</span>{{end}}{{if .Local}} <span class="muted">(branché à la box)</span>{{end}}</td>
+      <td data-label="Rôle">{{.Role}}</td>
+      <td data-label="Réception">{{if ge .RxRate 0}}{{.RxRate}} Mb/s{{else}}n/d{{end}}</td>
+      <td data-label="Émission">{{if ge .TxRate 0}}{{.TxRate}} Mb/s{{else}}n/d{{end}}</td>
+      <td data-label="Port Ethernet">{{.Port}}{{if gt .EthSpeed 0}}, {{.EthSpeed}} Mb/s{{if .EthFullDuplex}} full duplex{{end}}{{end}}</td>
+      <td data-label="Inactif depuis">{{since .Inactive}}</td>
+      <td>
+        <details class="inline">
+          <summary class="ghost-btn danger">Réinitialiser</summary>
+          <form method="post" action="/freeplug/{{.ID}}/reset" class="stack">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce Freeplug redémarre et que tout ce qui est branché derrière perd le réseau un instant.</label>
+            <button class="small danger">Réinitialiser</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{else}}
+<p class="empty">Aucun Freeplug détecté sur le réseau de la box.</p>
+{{end}}
+<p class="hint">Les débits sont ceux de la liaison courant porteur entre les Freeplugs et le coordinateur.</p>
+{{end}}
+{{end}}
