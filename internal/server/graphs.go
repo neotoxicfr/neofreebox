@@ -79,7 +79,7 @@ type chart struct {
 }
 
 const (
-	chartW, chartH = 720, 240
+	chartW, chartH = 400, 200
 	maxPoints      = 240
 	colorUp        = "#e5383b"
 	colorDown      = "#3b82f6"
@@ -249,7 +249,7 @@ func niceMax(v float64) float64 {
 // makeChart draws the series as polylines. mult converts the RRD value to
 // the displayed unit (byte/s to bit/s: 8).
 func makeChart(title string, pts []rrdPoint, from, to int64, days bool, mult float64, format func(float64) string, defs []seriesDef) chart {
-	c := chart{Title: title, W: chartW, H: chartH, Left: 72, Right: chartW - 12, Top: 30, Bottom: 26}
+	c := chart{Title: title, W: chartW, H: chartH, Left: 64, Right: chartW - 8, Top: 28, Bottom: 22}
 	pw, ph := c.Right-c.Left, float64(c.H)-c.Top-c.Bottom
 	maxV := 0.0
 	for _, p := range pts {
@@ -281,7 +281,7 @@ func makeChart(title string, pts []rrdPoint, from, to int64, days bool, mult flo
 			continue
 		}
 		c.Series = append(c.Series, chartSeries{Name: d.Name, Color: d.Color, Points: strings.Join(poly, " "),
-			Last: format(last), Max: format(peak), LegendX: c.Left + float64(i)*150})
+			Last: format(last), Max: format(peak), LegendX: c.Left + float64(i)*105})
 	}
 	c.Empty = len(c.Series) == 0
 	for i := 0; i <= 4; i++ {
