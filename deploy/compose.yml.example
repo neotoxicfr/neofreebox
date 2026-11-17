@@ -7,7 +7,7 @@
 # une fois sur ce réseau pendant que tu valides la demande sur l'écran de la
 # box. Donne le fichier à l'UID 65532 (l'utilisateur de l'image), en mode 0400,
 # ainsi que le dossier de données, avant le premier lancement :
-#   mkdir -p data && sudo chown 65532:65532 data && chmod 0700 data
+#   mkdir -p data && chmod 0700 data && sudo chown 65532:65532 data
 services:
   neofreebox:
     image: ghcr.io/neotoxicfr/neofreebox:latest

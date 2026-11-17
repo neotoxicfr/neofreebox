@@ -121,7 +121,7 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
 
    ```bash
    mkdir -p secrets data
-   sudo chown 65532:65532 secrets data && chmod 0700 secrets data
+   chmod 0700 secrets data && sudo chown 65532:65532 secrets data
    docker run --rm -it -v "$PWD/secrets:/out" ghcr.io/neotoxicfr/neofreebox:latest \
      pair -o /out/freebox_app_token
    ```

@@ -99,6 +99,7 @@ func (t *tokenStore) revoke(id string) (bool, error) {
 func (t *tokenStore) revokeAll() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.list = nil // invalid at once, even if the file cannot be rewritten
 	return t.save(nil)
 }
 
