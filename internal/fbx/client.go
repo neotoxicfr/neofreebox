@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -134,6 +135,9 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 // call sends one request; session may be empty for the unauthenticated
 // login endpoints.
 func (c *Client) call(ctx context.Context, method, path, session string, in, out any) error {
+	if !safePath(path) {
+		return fmt.Errorf("fbx: refusing path %q", path)
+	}
 	var body io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
@@ -174,4 +178,19 @@ func (c *Client) call(ctx context.Context, method, path, session string, in, out
 		}
 	}
 	return nil
+}
+
+// safePath rejects dot segments, so an argument spliced into a path can
+// never reach another endpoint than the one the caller meant.
+func safePath(path string) bool {
+	p, _, _ := strings.Cut(path, "?")
+	for _, seg := range strings.Split(p, "/") {
+		if seg == "." || seg == ".." || strings.Contains(seg, "\\") {
+			return false
+		}
+		if u, err := url.PathUnescape(seg); err != nil || u == "." || u == ".." || strings.ContainsAny(u, "/\\") {
+			return false
+		}
+	}
+	return true
 }

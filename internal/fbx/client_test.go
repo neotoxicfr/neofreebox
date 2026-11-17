@@ -149,3 +149,19 @@ func TestEmbeddedCAs(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSafePath(t *testing.T) {
+	for path, ok := range map[string]bool{
+		"lan/browser/pub/":                         true,
+		"lan/browser/pub/ether-00:11:22:33:44:55/": true,
+		"fs/ls/L0Rpc3F1ZQ==?onlyFolder=1":          true,
+		"lan/browser/../../system/reboot/":         false,
+		"lan/browser/%2e%2e/system/":               false,
+		"lan/browser/a%2Fb/":                       false,
+		"lan/browser/./":                           false,
+	} {
+		if safePath(path) != ok {
+			t.Errorf("safePath(%q) = %v, want %v", path, !ok, ok)
+		}
+	}
+}

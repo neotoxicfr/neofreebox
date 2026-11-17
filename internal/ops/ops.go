@@ -123,6 +123,9 @@ func Call(ctx context.Context, box Box, op Op, args map[string]any) (json.RawMes
 		if p.Query {
 			q.Set(p.Name, s)
 		} else {
+			if s == "" || s == "." || s == ".." || strings.ContainsAny(s, "/\\") {
+				return nil, fmt.Errorf("argument %q: not a valid identifier", p.Name)
+			}
 			path = strings.ReplaceAll(path, "{"+p.Name+"}", url.PathEscape(s))
 		}
 	}
