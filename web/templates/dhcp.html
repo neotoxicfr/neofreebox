@@ -1,0 +1,133 @@
+{{define "title"}}DHCP · neofreebox{{end}}
+{{define "content"}}
+<h1>DHCP</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+<section class="card">
+  <h2>Serveur DHCP IPv4 <span class="badge {{if .Config.Enabled}}on{{else}}off{{end}}">{{if .Config.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <p class="muted">Passerelle <span class="mono">{{.Config.Gateway}}</span>, masque <span class="mono">{{.Config.Netmask}}</span>.</p>
+  {{if .Config.Enabled}}
+  <form method="post" action="/dhcp/enabled" class="stack">
+    <input type="hidden" name="enabled" value="0">
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils sans adresse fixe perdront le réseau.</label>
+    <button class="danger">Désactiver le DHCP</button>
+  </form>
+  {{else}}
+  <form method="post" action="/dhcp/enabled"><input type="hidden" name="enabled" value="1"><button>Activer le DHCP</button></form>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>DHCPv6 <span class="badge {{if .V6.Enabled}}on{{else}}off{{end}}">{{if .V6.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  {{if .V6.Enabled}}
+  <form method="post" action="/dhcp/v6/enabled" class="stack">
+    <input type="hidden" name="enabled" value="0">
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'IPv6 peut cesser de fonctionner sur certains appareils.</label>
+    <button class="danger">Désactiver le DHCPv6</button>
+  </form>
+  {{else}}
+  <form method="post" action="/dhcp/v6/enabled" class="stack">
+    <input type="hidden" name="enabled" value="1">
+    <p class="hint">Sur certains appareils Android, activer le DHCPv6 peut bloquer l'IPv6.</p>
+    <button>Activer le DHCPv6</button>
+  </form>
+  {{end}}
+  <form method="post" action="/dhcp/v6/dns" class="stack">
+    <label class="check"><input type="checkbox" name="use_custom_dns" value="1"{{if .V6.UseCustomDNS}} checked{{end}}> Utiliser des serveurs DNS IPv6 personnalisés</label>
+    {{if .V6.DNS}}<p class="muted">Serveurs : {{range $i, $d := .V6.DNS}}{{if $i}}, {{end}}<span class="mono">{{$d}}</span>{{end}}</p>{{end}}
+    <button class="ghost">Enregistrer</button>
+  </form>
+</section>
+</div>
+
+<section class="card section">
+  <h2>Réglages IPv4</h2>
+  <form method="post" action="/dhcp/config" class="stack">
+    <div class="row">
+      <label class="grow">Début de la plage<input name="ip_range_start" value="{{.Config.IPRangeStart}}" required inputmode="decimal"></label>
+      <label class="grow">Fin de la plage<input name="ip_range_end" value="{{.Config.IPRangeEnd}}" required inputmode="decimal"></label>
+    </div>
+    <div class="row">
+      {{range .Config.DNSFields}}<label class="grow">DNS {{.N}}<input name="dns{{.N}}" value="{{.Addr}}" inputmode="decimal"></label>{{end}}
+    </div>
+    <div class="row">
+      <label class="grow">Serveur de démarrage (TFTP)<input name="boot_server" value="{{.Config.BootServer}}"></label>
+      <label class="grow">Fichier de démarrage<input name="boot_file" value="{{.Config.BootFile}}"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="sticky_assign" value="1"{{if .Config.StickyAssign}} checked{{end}}> Toujours attribuer la même adresse à un appareil</label>
+    <label class="check"><input type="checkbox" name="always_broadcast" value="1"{{if .Config.AlwaysBroadcast}} checked{{end}}> Toujours répondre en diffusion</label>
+    <label class="check"><input type="checkbox" name="ignore_out_of_range_hint" value="1"{{if .Config.IgnoreOutOfRangeHint}} checked{{end}}> Ignorer l'adresse demandée si elle est hors plage</label>
+    <div><button>Enregistrer</button></div>
+  </form>
+</section>
+
+<section class="card table-wrap section">
+  <h2>Baux statiques</h2>
+  {{if .Static}}
+  <table class="stack-sm">
+    <thead><tr><th>Adresse IP</th><th>MAC</th><th>Nom</th><th>Commentaire</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Static}}
+    <tr>
+      <td class="mono">{{.IP}}</td>
+      <td class="mono" data-label="MAC">{{.MAC}}</td>
+      <td data-label="Nom">{{.Name}}</td>
+      <td data-label="Commentaire">{{.Comment}}</td>
+      <td>
+        <div class="actions">
+          <details class="inline">
+            <summary class="ghost-btn">Modifier</summary>
+            <form method="post" action="/dhcp/static/{{.ID}}/update" class="row">
+              <label>Adresse IP<input name="ip" value="{{.IP}}" required inputmode="decimal"></label>
+              <label class="grow">Commentaire<input name="comment" value="{{.Comment}}" maxlength="64"></label>
+              <button class="small">Enregistrer</button>
+            </form>
+          </details>
+          <form method="post" action="/dhcp/static/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucun bail statique.</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter un bail statique</summary>
+    <form method="post" action="/dhcp/static" class="row">
+      <label>Adresse MAC<input name="mac" required placeholder="00:11:22:33:44:55" class="mono"></label>
+      <label>Adresse IP<input name="ip" required inputmode="decimal" placeholder="192.168.1.20"></label>
+      <label class="grow">Commentaire<input name="comment" maxlength="64"></label>
+      <button class="small">Ajouter</button>
+    </form>
+  </details>
+</section>
+
+<section class="card table-wrap section">
+  <h2>Baux dynamiques actifs</h2>
+  {{if .Dynamic}}
+  <table class="stack-sm">
+    <thead><tr><th>Adresse IP</th><th>MAC</th><th>Nom</th><th>Reste</th><th>Attribué le</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Dynamic}}
+    <tr>
+      <td class="mono">{{.IP}}{{if .IsStatic}} <span class="badge on">statique</span>{{end}}</td>
+      <td class="mono" data-label="MAC">{{.MAC}}</td>
+      <td data-label="Nom">{{.Name}}</td>
+      <td data-label="Reste">{{since .LeaseRemaining}}</td>
+      <td data-label="Attribué le">{{date .AssignTime}}</td>
+      <td>
+        {{if not .IsStatic}}
+        <form method="post" action="/dhcp/static">
+          <input type="hidden" name="mac" value="{{.MAC}}"><input type="hidden" name="ip" value="{{.IP}}"><input type="hidden" name="comment" value="{{.Name}}">
+          <button class="ghost small">Rendre fixe</button>
+        </form>
+        {{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucun bail actif.</p>{{end}}
+</section>
+{{end}}
+{{end}}
