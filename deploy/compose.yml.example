@@ -1,11 +1,11 @@
-# Copy to docker-compose.yml and adjust. Put neofreebox behind a reverse proxy
-# with HTTPS (the session cookie is Secure), ideally with its own
-# authentication (Authelia, Authentik…). The server must be on the box's
-# local network: the box only answers mafreebox.freebox.fr from there.
+# À copier en docker-compose.yml puis à adapter. Place neofreebox derrière un
+# reverse proxy en HTTPS (le cookie de session est Secure), idéalement avec sa
+# propre authentification (Authelia, Authentik…). Le serveur doit être sur le
+# réseau local de la box : elle ne répond sur mafreebox.freebox.fr que de là.
 #
-# The app token comes from `neofreebox pair -o freebox_app_token`, run once on
-# that network while you confirm the request on the box's screen. Give the
-# file to UID 65532 (the image's user), mode 0400.
+# Le jeton d'application vient de `neofreebox pair -o freebox_app_token`, lancé
+# une fois sur ce réseau pendant que tu valides la demande sur l'écran de la
+# box. Donne le fichier à l'UID 65532 (l'utilisateur de l'image), en mode 0400.
 services:
   neofreebox:
     image: ghcr.io/neotoxicfr/neofreebox:latest
@@ -14,6 +14,7 @@ services:
     environment:
       NEOFREEBOX_APP_TOKEN_FILE: /run/secrets/freebox_app_token
       # NEOFREEBOX_BOX_URL: https://mafreebox.freebox.fr
+      # NEOFREEBOX_READ_ONLY: "1"   # refuse toute écriture vers la box (démonstration)
     secrets:
       - freebox_app_token
     volumes:
