@@ -78,6 +78,9 @@ func (h lanHost) Link() string {
 	return h.AccessPoint.Type
 }
 
+// maxRows is how many rows a long list shows before "Tout afficher".
+const maxRows = 100
+
 func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
 	var hosts []lanHost
 	err := s.fetch(r.Context(), "lan/browser/pub/", &hosts)
@@ -99,7 +102,11 @@ func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
 		}
 		return strings.ToLower(shown[i].PrimaryName) < strings.ToLower(shown[j].PrimaryName)
 	})
-	s.show(w, r, "devices", map[string]any{"Hosts": shown, "Active": active, "Total": len(hosts), "All": all, "Q": q}, err)
+	matched := len(shown)
+	if r.URL.Query().Get("full") != "1" && len(shown) > maxRows {
+		shown = shown[:maxRows]
+	}
+	s.show(w, r, "devices", map[string]any{"Hosts": shown, "Active": active, "Total": len(hosts), "All": all, "Q": q, "Matched": matched, "Capped": matched > len(shown)}, err)
 }
 
 func (s *Server) renameDevice(w http.ResponseWriter, r *http.Request) {

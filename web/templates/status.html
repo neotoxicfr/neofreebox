@@ -5,9 +5,9 @@
 <div class="grid">
   <section class="card">
     <h2>Connexion internet</h2>
-    <p class="big"><span class="dot {{if eq .Conn.State "up"}}up{{else}}down{{end}}"></span>{{if eq .Conn.State "up"}}Connectée{{else}}{{.Conn.State}}{{end}}</p>
+    <p class="big"><span class="dot {{if eq .Conn.State "up"}}up{{else}}down{{end}}" aria-hidden="true"></span>{{if eq .Conn.State "up"}}Connectée{{else}}{{.Conn.StateLabel}}{{end}}</p>
     <dl>
-      <dt>Média</dt><dd>{{.Conn.Media}}</dd>
+      <dt>Média</dt><dd>{{.Conn.MediaLabel}}</dd>
       <dt>IPv4</dt><dd class="mono">{{.Conn.IPv4}}</dd>
       {{if .Conn.IPv6}}<dt>IPv6</dt><dd class="mono">{{.Conn.IPv6}}</dd>{{end}}
     </dl>
@@ -30,9 +30,22 @@
     </dl>
   </section>
   <section class="card">
-    <h2>Droits de neofreebox</h2>
-    <ul class="tags">{{range .Rights}}<li>{{.}}</li>{{end}}</ul>
+    <h2>En bref</h2>
+    <dl>
+      {{with .Brief}}
+      {{if .HasHosts}}<dt><a href="/devices">Appareils connectés</a></dt><dd>{{.Active}} sur {{.Total}} vus par la box</dd>{{end}}
+      {{if .HasWifi}}<dt><a href="/wifi">Wi-Fi</a></dt><dd>{{if .Wifi}}activé{{else}}désactivé{{end}}</dd>{{end}}
+      {{if .HasCalls}}<dt><a href="/calls">Appels non lus</a></dt><dd>{{.Unread}}</dd>{{end}}
+      {{end}}
+    </dl>
   </section>
 </div>
+{{if .Rights}}
+<details class="inline section">
+  <summary class="ghost-btn">Droits accordés à neofreebox</summary>
+  <p class="hint">Identifiants des droits de l'application sur la box (Freebox OS, Gestion des accès).</p>
+  <ul class="tags">{{range .Rights}}<li>{{.}}</li>{{end}}</ul>
+</details>
+{{end}}
 {{end}}
 {{end}}

@@ -82,7 +82,7 @@ func TestConnectionPage(t *testing.T) {
 
 func TestConnectionWrites(t *testing.T) {
 	box, _, send, _ := connectionSetup(t)
-	send("/connection/config", url.Values{"ping": {"1"}, "sip_alg": {"disabled"}})
+	send("/connection/config", url.Values{"ping": {"1"}, "sip_alg": {"disabled"}, "confirm": {"1"}})
 	send("/connection/ddns/ovh", url.Values{"enabled": {"1"}, "hostname": {"h.example.org"}, "user": {"u"}, "password": {"pw"}})
 	send("/connection/ddns/ovh", url.Values{"hostname": {"h.example.org"}, "user": {"u"}})
 	send("/connection/remote", url.Values{"remote_access": {"1"}, "remote_access_port": {"44666"}, "confirm": {"1"}})
@@ -104,7 +104,8 @@ func TestConnectionDangerousNeedsConfirm(t *testing.T) {
 	send("/connection/remote", url.Values{"remote_access": {"1"}, "remote_access_port": {"44666"}})
 	send("/connection/ipv6", url.Values{"ipv6_enabled": {"1"}})
 	send("/connection/ddns/unknown", url.Values{"enabled": {"1"}})
-	send("/connection/config", url.Values{"sip_alg": {"bogus"}})
+	send("/connection/config", url.Values{"sip_alg": {"bogus"}, "confirm": {"1"}})
+	send("/connection/config", url.Values{"ping": {"1"}, "sip_alg": {"disabled"}})
 	if len(box.writes) != 0 {
 		t.Fatalf("unexpected writes: %v", box.writes)
 	}

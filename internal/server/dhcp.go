@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -162,7 +163,13 @@ func (s *Server) dhcp(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Slice(static, func(i, j int) bool { return dhcpIPLess(static[i].IP, static[j].IP) })
 	sort.Slice(dynamic, func(i, j int) bool { return dhcpIPLess(dynamic[i].IP, dynamic[j].IP) })
-	s.show(w, r, "dhcp", map[string]any{"Config": cfg, "Static": static, "Dynamic": dynamic, "V6": v6}, err)
+	total := len(dynamic)
+	if r.URL.Query().Get("all") != "1" && total > maxRows {
+		dynamic = dynamic[:maxRows]
+	}
+	// The box pads the DNS list with "::": not worth showing.
+	v6.DNS = slices.DeleteFunc(v6.DNS, func(d string) bool { a, err := netip.ParseAddr(d); return err != nil || a.IsUnspecified() })
+	s.show(w, r, "dhcp", map[string]any{"Config": cfg, "Static": static, "Dynamic": dynamic, "DynamicTotal": total, "V6": v6}, err)
 }
 
 func dhcpRefuse(w http.ResponseWriter, r *http.Request, back, msg string) {
@@ -171,6 +178,9 @@ func dhcpRefuse(w http.ResponseWriter, r *http.Request, back, msg string) {
 }
 
 func (s *Server) saveDHCPConfig(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/dhcp") {
+		return
+	}
 	start, end := formStr(r, "ip_range_start"), formStr(r, "ip_range_end")
 	if !dhcpIPv4(start) || !dhcpIPv4(end) {
 		dhcpRefuse(w, r, "/dhcp", "La plage doit être formée de deux adresses IPv4 valides.")
@@ -253,5 +263,8 @@ func (s *Server) updateStaticLease(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteStaticLease(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/dhcp") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "dhcp/static_lease/"+url.PathEscape(r.PathValue("id")), nil, "Bail statique supprimé.", "/dhcp")
 }

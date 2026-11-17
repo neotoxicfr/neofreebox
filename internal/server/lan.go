@@ -28,7 +28,7 @@ func init() {
 		ops.Op{Name: "lan_routes_get", Description: "List the static routes: prefix (CIDR), gateway, enabled, description.",
 			Path: "lan/routes/"},
 		ops.Op{Name: "lan_routes_update", Description: "Replace the whole list of static routes (the body is a JSON array; send the existing routes you want to keep).",
-			Method: http.MethodPut, Path: "lan/routes/", Body: true, Dangerous: true,
+			Method: http.MethodPut, Path: "lan/routes/", Body: true, BodyArray: true, Dangerous: true,
 			BodyHelp: `[{"prefix": "192.168.42.0/24", "gateway": "192.168.1.38", "enabled": true, "description": "My route"}]`},
 	)
 }
@@ -59,7 +59,7 @@ func (s *Server) lan(w http.ResponseWriter, r *http.Request) {
 func (s *Server) lanUpdate(w http.ResponseWriter, r *http.Request, set map[string]any, done string) {
 	var cfg map[string]any
 	if err := s.fetch(r.Context(), "lan/config/", &cfg); err != nil {
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 		http.Redirect(w, r, "/lan", http.StatusSeeOther)
 		return
 	}
@@ -118,7 +118,7 @@ func (s *Server) lanRouteAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	var routes []lanRoute
 	if err := s.fetch(r.Context(), "lan/routes/", &routes); err != nil {
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 		http.Redirect(w, r, "/lan", http.StatusSeeOther)
 		return
 	}
