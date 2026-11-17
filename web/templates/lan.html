@@ -1,0 +1,74 @@
+{{define "title"}}Réseau local · neofreebox{{end}}
+{{define "content"}}
+<h1>Réseau local</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+  <section class="card">
+    <h2>Noms de la box</h2>
+    <form method="post" action="/lan/names" class="stack">
+      <label>Nom<input name="name" value="{{.Name}}" required maxlength="63"></label>
+      <label>Nom DNS<input name="name_dns" value="{{.NameDNS}}" required maxlength="63"></label>
+      <label>Nom mDNS<input name="name_mdns" value="{{.NameMDNS}}" required maxlength="63"></label>
+      <label>Nom NetBIOS<input name="name_netbios" value="{{.NameNetbios}}" required maxlength="63"></label>
+      <label>Domaine local<input name="local_domain" value="{{.LocalDomain}}" required maxlength="63"></label>
+      <div class="actions"><button>Enregistrer</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Mode et adresse</h2>
+    <form method="post" action="/lan/network" class="stack">
+      <label>Mode
+        <select name="mode">
+          <option value="router"{{if eq .Mode "router"}} selected{{end}}>Routeur</option>
+          <option value="bridge"{{if eq .Mode "bridge"}} selected{{end}}>Pont (bridge)</option>
+        </select>
+      </label>
+      <p class="hint">En mode pont, la plupart des services de la box (DHCP, Wi-Fi, redirections…) sont désactivés.</p>
+      <label>Adresse IP de la box<input class="mono" name="ip" value="{{.IP}}" required inputmode="decimal" pattern="[0-9.]+"></label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que changer le mode ou l'adresse de la box peut me couper l'accès à son interface.</label>
+      <div class="actions"><button class="danger">Enregistrer</button></div>
+    </form>
+  </section>
+</div>
+
+<section class="card section">
+  <h2>Routes statiques</h2>
+  {{if .Routes}}
+  <div class="table-wrap">
+    <table class="stack-sm">
+      <thead><tr><th>Préfixe</th><th>Passerelle</th><th>État</th><th>Description</th><th><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>
+      {{range $i, $r := .Routes}}
+      <tr>
+        <td class="mono">{{$r.Prefix}}</td>
+        <td class="mono" data-label="Passerelle">{{$r.Gateway}}</td>
+        <td data-label="État"><span class="badge {{if $r.Enabled}}on{{else}}off{{end}}">{{if $r.Enabled}}active{{else}}inactive{{end}}</span></td>
+        <td data-label="Description">{{$r.Description}}</td>
+        <td>
+          <details class="inline">
+            <summary class="ghost-btn">Supprimer</summary>
+            <form method="post" action="/lan/routes/{{$i}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que supprimer une route peut couper l'accès à ce réseau.</label>
+              <button class="danger small">Supprimer</button>
+            </form>
+          </details>
+        </td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}<p class="empty">Aucune route statique.</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter une route</summary>
+    <form method="post" action="/lan/routes/add" class="stack">
+      <label>Préfixe (CIDR)<input class="mono" name="prefix" placeholder="192.168.42.0/24" required></label>
+      <label>Passerelle<input class="mono" name="gateway" placeholder="192.168.1.38" required></label>
+      <label>Description<input name="description" maxlength="64"></label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une mauvaise route peut couper l'accès à des réseaux.</label>
+      <button class="small">Ajouter</button>
+    </form>
+  </details>
+</section>
+{{end}}
+{{end}}
