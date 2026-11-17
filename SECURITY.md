@@ -35,7 +35,17 @@ Authentik…) et possède aussi sa propre connexion :
   cross-origin de Go.
 - L'API JSON et le serveur MCP exigent un jeton porteur `nfb_…` créé depuis la page Compte.
   Seule son empreinte SHA-256 est conservée (`tokens.json`) ; il n'est affiché qu'une fois et
-  se révoque à tout moment. Les opérations dangereuses exigent `"confirm": true`.
+  se révoque à tout moment. Sa création redemande le mot de passe, et changer le mot de passe
+  révoque tous les jetons. Un jeton peut être limité à la **lecture seule** : il ne peut alors
+  appeler que des opérations qui ne modifient rien.
+- Une opération est **dangereuse** quand elle peut couper le réseau ou ton accès, effacer des
+  données, exposer la box ou le réseau local (port ouvert, DMZ, accès invité, partage sans mot
+  de passe, compte VPN), révéler un secret (clé Wi-Fi, configuration VPN) ou faire contacter
+  par la box une adresse arbitraire (téléchargement, notification, lecture sur un player).
+  Dans l'interface, elle demande une case de confirmation ; par l'API et le MCP, elle exige
+  `"confirm": true`, et le MCP l'annonce comme destructrice.
+- Le mode `NEOFREEBOX_READ_ONLY` refuse toute écriture avant qu'elle n'atteigne la box : utile
+  pour une démonstration ou un audit sur une vraie box.
 - Le jeton d'application est lu dans un fichier (`NEOFREEBOX_APP_TOKEN_FILE`), jamais envoyé
   au navigateur ni écrit dans les journaux. Traite ce fichier comme un secret : il donne le
   contrôle complet de la box.
