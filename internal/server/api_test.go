@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -132,5 +133,24 @@ func TestReadOnlyToken(t *testing.T) {
 	resp.Body.Close()
 	if regexp.MustCompile(`nfb_[A-Za-z0-9_-]+`).Match(b) {
 		t.Fatal("token created without the password")
+	}
+}
+
+func TestRevokeAllClearsMemoryOnWriteFailure(t *testing.T) {
+	dir := t.TempDir()
+	ts, err := loadTokens(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err := ts.create("x", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.path = filepath.Join(dir, "missing", "tokens.json") // the next write fails
+	if err := ts.revokeAll(); err == nil {
+		t.Fatal("write to a missing directory succeeded")
+	}
+	if _, ok := ts.lookup(tok); ok {
+		t.Fatal("token still valid after a failed revocation")
 	}
 }

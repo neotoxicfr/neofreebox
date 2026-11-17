@@ -121,16 +121,21 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		s.render(w, http.StatusBadRequest, "account", data)
 		return
 	}
+	// A stolen session could have created tokens: a new password ends them
+	// too. Revoke first, so a failure leaves the old password in place and
+	// the change is not reported as done.
+	if err := s.tokens.revokeAll(); err != nil {
+		s.log.Error("revoke tokens", "err", err)
+		data["Error"] = "Les jetons d'API n'ont pas pu être révoqués sur le disque : le mot de passe n'a pas été changé. Réessaie."
+		s.render(w, http.StatusInternalServerError, "account", data)
+		return
+	}
 	if err := s.account.set(s.account.Username, pass, false); err != nil {
 		s.log.Error("change password", "err", err)
 		http.Error(w, "Erreur interne", http.StatusInternalServerError)
 		return
 	}
 	s.sessions.dropAll()
-	// A stolen session could have created tokens: a new password ends them too.
-	if err := s.tokens.revokeAll(); err != nil {
-		s.log.Error("revoke tokens", "err", err)
-	}
 	s.startSession(w)
 	data = s.accountData()
 	data["Done"] = true
