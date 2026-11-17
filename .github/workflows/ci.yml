@@ -1,0 +1,79 @@
+name: CI
+
+# The checks, called by pr.yml on every pull request and by docker-publish.yml
+# before an image is published. The names of these jobs are the required
+# status checks of dev ("CI / <name>"): do not rename them.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build, test & lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test -race -timeout 120s ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+
+      # Pinned rather than via golang/govulncheck-action, which installs
+      # govulncheck@latest on every run. Bump alongside the Go version.
+      - name: Vulnerability scan
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          govulncheck ./...
+
+  security-scan:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The Trivy image, pinned by digest, rather than trivy-action: the action
+      # installs the binary from get.trivy.dev, whose outage on 04/11/2026
+      # blocked a release. Bump the tag and digest by hand (docker buildx
+      # imagetools inspect ghcr.io/aquasecurity/trivy:<version>).
+      # --ignore-unfixed: a vulnerability with no fixed version yet cannot be
+      # acted on; it must not hold back every image until upstream ships one.
+      - name: Run Trivy scanner
+        run: >-
+          docker run --rm -v "$PWD:/src:ro"
+          ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+          fs --scanners vuln,secret,misconfig --severity CRITICAL,HIGH
+          --ignore-unfixed --exit-code 1 /src
+
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the whole history, not only the tree Trivy reads
+
+      - name: Run gitleaks
+        run: >-
+          docker run --rm -v "$PWD:/src:ro"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git --no-banner --redact /src

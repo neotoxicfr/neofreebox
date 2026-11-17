@@ -1,0 +1,200 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit reviews the owner's pull requests, and their merge into dev waits
+# for a real review of the head commit (pr.yml). Dependabot's are left to CI.
+# It never approves a pull request, and its findings do not block one.
+
+language: fr-FR
+tone_instructions: >-
+  Direct et concis : le constat, sa preuve (fichier, ligne, scénario) et le correctif.
+  Ni compliments ni remplissage. Ne signale que ce qui est vérifié dans le code.
+
+reviews:
+  profile: chill
+  # `request_changes_workflow` is the legacy alias of this key.
+  auto_approvals:
+    enabled: false
+  # pr.yml reads the `CodeRabbit` check run: do not turn it off.
+  review_progress: true
+  # A review that stops on an error ends neutral: pr.yml does not merge on it.
+  fail_commit_status: false
+
+  high_level_summary: true
+  changed_files_summary: true
+  poem: false
+  in_progress_fortune: false
+  # One maintainer: nobody to suggest.
+  suggested_reviewers: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # The default branch is always reviewed; day-to-day pull requests target `dev`.
+    base_branches:
+      - "^dev$"
+    # Version bumps are left to CI, and cost no review.
+    ignore_usernames:
+      - "dependabot[bot]"
+
+  # Images, fonts, `go.sum` and other lock files are already left out by default.
+  # Test fixtures stay in: they are anonymised upstream responses, see below.
+  path_filters:
+    - "!LICENSE"
+    - "!CODE_OF_CONDUCT.md"
+    - "!**/LICENSE.md"
+
+  path_instructions:
+    - path: "**"
+      instructions: |
+        No secret (password, token, API key), personal e-mail address, private host
+        name or IP address in a tracked file: examples use `example.com` and obviously
+        fake values. Flag any that looks real.
+        Keep the change small: reuse what exists, no new abstraction, no new
+        dependency and no configuration option for a rare case.
+        CONTRIBUTING.md and SECURITY.md are the reference for conventions and for the
+        security model; do not re-open a decision they state.
+
+    - path: "**/*.go"
+      instructions: |
+        Errors are wrapped with context: `fmt.Errorf("context: %w", err)`.
+        Configuration is `NEOFREEBOX_*` environment variables validated in
+        `config.Load()`; a new one also goes in `Dockerfile` (if it has a default),
+        `README.md` and `deploy/compose.yml.example`.
+        CI already blocks on golangci-lint (`.golangci.yml`), `go test -race` and
+        govulncheck: do not repeat what those report.
+
+    - path: "internal/server/**"
+      instructions: |
+        Security headers are set once in the middleware. The CSP is `'self'` only
+        for scripts and styles, with no inline script, inline style or `unsafe-*`;
+        `frame-ancestors 'none'`, `nosniff` and `Referrer-Policy: same-origin` stay.
+        Flag anything that loosens them.
+        Every route but sign-in, first run and `/healthz` goes through the session
+        guard; every state-changing request is a POST. Request bodies are
+        size-bounded (`http.MaxBytesReader`, `io.LimitReader`).
+        The Freebox app token and the session token never reach the browser or
+        the logs. Actions that can cut the network (Wi-Fi, DHCP, bridge mode,
+        reboot) ask for confirmation first.
+        Sign-in is rate-limited by username under a global cap, never by client IP:
+        the app runs behind a reverse proxy. Do not suggest IP-based limiting.
+        Accepted, do not re-flag: a single account; sessions kept in memory (a
+        restart signs out); the reverse proxy's own authentication is not read.
+
+    - path: "internal/fbx/**"
+      instructions: |
+        The Freebox OS API client. Every HTTP client has a timeout and never follows
+        redirects. TLS verification is never disabled: the box is reached over
+        HTTPS with Free's root certificates embedded. An error or log line must
+        not carry the app token, the challenge password or the session token.
+
+    - path: "web/**"
+      instructions: |
+        No framework, no npm, no build step: `html/template`, vanilla JS and one
+        stylesheet, embedded in the binary. Do not suggest React, Tailwind,
+        TypeScript or a bundler.
+        The CSP forbids inline scripts, `style=` attributes, inline event handlers
+        and `eval`; no `innerHTML` with data that is not a constant.
+        No script, style or font is loaded from a third party (no CDN).
+        Desktop and mobile are two designed layouts: a change must hold on both.
+        Accessibility is WCAG 2.2 AA: keyboard path, visible focus, accessible
+        names, state carried by ARIA attributes, contrast in dark and light themes.
+
+    - path: "**/*_test.go"
+      instructions: |
+        Tests are table-driven and never reach the network: the Freebox OS API is
+        faked with `httptest` from the anonymised responses in `testdata/`.
+
+    - path: "**/testdata/**"
+      instructions: |
+        Fixtures are real upstream responses, anonymised. Review only that: no real
+        e-mail address, user name, MAC address, serial number, host name, public IP
+        address, token or key.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Every `uses:` is pinned to a full commit SHA with the version in a comment.
+        `permissions` are least-privilege. Nothing is published on a red run.
+        Release notes are written by hand: `generate_release_notes` stays false.
+
+    - path: "{Dockerfile,deploy/**}"
+      instructions: |
+        Base images are pinned by digest. The runtime image is `distroless/static`,
+        non-root, with no shell; the example compose keeps `read_only`,
+        `cap_drop: [ALL]` and `no-new-privileges`. Do not suggest UPX or another
+        base image. Docker image tags are `X.Y.Z` without a leading `v`; git tags
+        and release titles are `vX.Y.Z`.
+
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: >-
+        Pull requests are squash-merged, so the title becomes the commit subject:
+        Conventional Commits, in English, imperative, without a trailing period
+        (`fix(auth): …`, `chore(deps): …`).
+
+  # Only what fits a Go monolith with vanilla JS, a Dockerfile and GitHub Actions.
+  # Linters for other languages never run here, and those that need a
+  # configuration file the repository does not have (ESLint, Semgrep, TruffleHog)
+  # skip themselves.
+  tools:
+    gitleaks:
+      enabled: true
+    presidio:
+      enabled: true
+    opengrep:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    hadolint:
+      enabled: true
+    biome:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    checkmake:
+      enabled: true
+    github-checks:
+      enabled: true
+    # Already blocking in CI, with the repository's own settings.
+    golangci-lint:
+      enabled: false
+    trivy:
+      enabled: false
+    # govulncheck, Trivy and Dependabot already watch the dependencies.
+    osvScanner:
+      enabled: false
+    # Trivy's misconfiguration scan and hadolint cover the same files.
+    checkov:
+      enabled: false
+    # Biome already reads the JavaScript and the stylesheet.
+    oxc:
+      enabled: false
+    stylelint:
+      enabled: false
+    # The templates are Go `html/template`, not plain HTML.
+    htmlhint:
+      enabled: false
+    # Interface strings and documentation are proofread by hand, in two languages.
+    languagetool:
+      enabled: false
+
+chat:
+  art: false
+
+knowledge_base:
+  # A public repository: what CodeRabbit learns here stays with this repository.
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"

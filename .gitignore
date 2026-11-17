@@ -1,0 +1,42 @@
+# Build output
+/bin/
+*.exe
+*.test
+*.out
+
+# Data directories
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment and local deployment
+.env
+.env.local
+docker-compose.yml
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Claude Code
+.claude/
+CLAUDE.md
+.audit/
+PLAN.md
+ETAT.md
+plans/
+
+# Freebox app token and local secrets
+*.token
+secrets/
