@@ -1,0 +1,35 @@
+{{define "title"}}Compte · neofreebox{{end}}
+{{define "content"}}
+<h1>Compte</h1>
+<p class="muted">Connecté en tant que <strong>{{.Username}}</strong>.</p>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+{{if .Done}}<p class="ok" role="status">Mot de passe changé. Les autres appareils sont déconnectés et les jetons d'API révoqués.</p>{{end}}
+<div class="grid">
+<form method="post" action="/account" class="card stack">
+  <h2>Changer le mot de passe</h2>
+  <label>Mot de passe actuel<input name="current" type="password" autocomplete="current-password" required></label>
+  <label>Nouveau mot de passe <span class="hint">12 caractères au moins</span><input name="password" type="password" autocomplete="new-password" required minlength="12"></label>
+  <label>Confirmation<input name="confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+  <button>Changer</button>
+</form>
+<section class="card stack">
+  <h2>Jetons d'API et MCP</h2>
+  <p class="muted">Un jeton donne accès à l'API JSON (<code>/api/v1/ops</code>) et au serveur MCP (<code>/mcp</code>), en en-tête <code>Authorization: Bearer …</code>. Sans la case « lecture seule », il a la main sur toute la box. Changer le mot de passe révoque tous les jetons.</p>
+  {{if .NewToken}}<div class="ok" role="status"><p>Jeton créé. Copie-le maintenant, il ne sera plus affiché&nbsp;:</p><p class="mono select">{{.NewToken}}</p></div>{{end}}
+  {{if .Tokens}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Droits</th><th scope="col">Créé le</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <tbody>{{range .Tokens}}<tr><td>{{.Name}}</td><td data-label="Droits">{{if .ReadOnly}}<span class="badge">lecture seule</span>{{else}}<span class="badge warn">complets</span>{{end}}</td><td data-label="Créé le">{{.Created.Format "02/01/2006"}}</td>
+      <td><form method="post" action="/account/tokens/{{.ID}}/revoke"><button class="ghost small">Révoquer<span class="sr-only"> le jeton {{.Name}}</span></button></form></td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+  <form method="post" action="/account/tokens" class="stack">
+    <h3>Nouveau jeton</h3>
+    <label>Nom<input name="name" required maxlength="64" placeholder="Claude, Home Assistant…"></label>
+    <label class="check"><input type="checkbox" name="read_only" value="1" checked> Lecture seule (consulter sans rien modifier)</label>
+    <label>Ton mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+    <button>Créer le jeton</button>
+  </form>
+</section>
+</div>
+{{end}}

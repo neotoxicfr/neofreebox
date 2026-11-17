@@ -1,0 +1,236 @@
+{{define "title"}}Serveur VPN · neofreebox{{end}}
+{{define "content"}}
+<h1>Serveur VPN</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+{{range .Servers}}
+  <section class="card">
+    <h2>{{.Label}}</h2>
+    <p><span class="badge{{if eq .State "started"}} on{{else if eq .State "error"}} off{{else if or (eq .State "starting") (eq .State "stopping")}} warn{{end}}">{{.StateLabel}}</span>
+      <span class="muted">{{.ConnectionCount}} connexion{{if gt .ConnectionCount 1}}s{{end}}</span></p>
+    {{with .Cfg}}
+    <dl>
+      <dt>Plage d'adresses</dt><dd class="mono">{{.IPStart}} – {{.IPEnd}}</dd>
+      {{if .Port}}<dt>Port</dt><dd class="mono">{{.Port}}</dd>{{end}}
+      {{if .PortIKE}}<dt>Ports IKE / NAT</dt><dd class="mono">{{.PortIKE}} / {{.PortNAT}}</dd>{{end}}
+    </dl>
+    {{end}}
+    <div class="actions">
+      {{if .Started}}
+      <details class="inline">
+        <summary class="ghost-btn danger">Arrêter<span class="sr-only"> {{.Label}}</span></summary>
+        <form method="post" action="/vpn/{{.Name}}/stop" class="stack">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les clients connectés seront déconnectés et ne pourront plus se reconnecter.</label>
+          <button class="danger small">Arrêter le serveur</button>
+        </form>
+      </details>
+      {{else}}
+      <details class="inline">
+        <summary class="ghost-btn">Démarrer<span class="sr-only"> {{.Label}}</span></summary>
+        <form method="post" action="/vpn/{{.Name}}/start" class="stack">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le serveur sera joignable depuis Internet : toute personne ayant un compte VPN pourra accéder à ton réseau local.</label>
+          <button class="small">Démarrer le serveur</button>
+        </form>
+      </details>
+      {{end}}
+    </div>
+  </section>
+{{end}}
+</div>
+
+{{range .Servers}}{{$srv := .}}{{with .Cfg}}
+<section class="card section">
+  <h2>Réglages · {{$srv.Label}}</h2>
+  {{if $srv.HasPort}}
+  <details class="inline">
+    <summary class="ghost-btn">Changer le port ({{.Port}})<span class="sr-only"> de {{$srv.Label}}</span></summary>
+    <form method="post" action="/vpn/{{$srv.Name}}/port" class="stack">
+      <label>Nouveau port<input type="number" name="port" value="{{.Port}}" min="1" max="65535" required></label>
+      <p class="hint">Les clients déjà configurés visent l'ancien port : il faudra mettre à jour leur configuration.</p>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les clients seront coupés tant que leur configuration n'est pas mise à jour.</label>
+      <button class="danger small">Changer le port</button>
+    </form>
+  </details>
+  {{end}}
+  {{if eq $srv.Type "wireguard"}}
+  <form method="post" action="/vpn/{{$srv.Name}}/settings" class="row">
+    <input type="hidden" name="type" value="wireguard">
+    <label>MTU<input type="number" name="mtu" value="{{.ConfWG.MTU}}" min="512" max="1420" required></label>
+    <p class="hint">Taille maximale des paquets (MTU) : laisse la valeur par défaut sauf problème de connexion.</p>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
+    <button class="small">Enregistrer</button>
+  </form>
+  {{else if eq $srv.Type "openvpn"}}
+  <form method="post" action="/vpn/{{$srv.Name}}/settings" class="row">
+    <input type="hidden" name="type" value="openvpn">
+    {{$c := .ConfOpenVPN.Cipher}}
+    <label>Chiffrement
+      <select name="cipher">
+        <option value="aes128"{{if eq $c "aes128"}} selected{{end}}>AES-128</option>
+        <option value="aes256"{{if eq $c "aes256"}} selected{{end}}>AES-256</option>
+        <option value="chacha20poly1305"{{if eq $c "chacha20poly1305"}} selected{{end}}>ChaCha20-Poly1305</option>
+        <option value="blowfish"{{if eq $c "blowfish"}} selected{{end}}>Blowfish</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="use_tcp" value="1"{{if .ConfOpenVPN.UseTCP}} checked{{end}}> TCP au lieu d'UDP</label>
+    <label class="check"><input type="checkbox" name="disable_fragment" value="1"{{if .ConfOpenVPN.DisableFragment}} checked{{end}}> Désactiver la fragmentation</label>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
+    <button class="small">Enregistrer</button>
+  </form>
+  {{else if eq $srv.Type "pptp"}}
+  <form method="post" action="/vpn/{{$srv.Name}}/settings" class="row">
+    <input type="hidden" name="type" value="pptp">
+    {{$m := .ConfPPTP.MPPE}}
+    <label>Chiffrement MPPE
+      <select name="mppe">
+        <option value="disable"{{if eq $m "disable"}} selected{{end}}>Désactivé</option>
+        <option value="require"{{if eq $m "require"}} selected{{end}}>Obligatoire</option>
+        <option value="require_128"{{if eq $m "require_128"}} selected{{end}}>Obligatoire (128 bits)</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="pap" value="1"{{if index .ConfPPTP.AllowedAuth "pap"}} checked{{end}}> PAP</label>
+    <label class="check"><input type="checkbox" name="chap" value="1"{{if index .ConfPPTP.AllowedAuth "chap"}} checked{{end}}> CHAP</label>
+    <label class="check"><input type="checkbox" name="mschapv2" value="1"{{if index .ConfPPTP.AllowedAuth "mschapv2"}} checked{{end}}> MS-CHAPv2</label>
+    <p class="hint">PAP envoie le mot de passe en clair et PPTP est un protocole ancien : préfère WireGuard ou OpenVPN.</p>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés ou affaiblir la sécurité du serveur.</label>
+    <button class="small">Enregistrer</button>
+  </form>
+  {{else}}
+  <p class="muted">Pas de réglage modifiable ici pour ce serveur.</p>
+  {{end}}
+</section>
+{{end}}{{end}}
+
+<section class="card section">
+  <h2>Utilisateurs</h2>
+  {{if .Users}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">IP réservée</th><th scope="col">Détails</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Users}}
+    <tr>
+      <td>{{.Login}}</td>
+      <td data-label="Type">{{if eq .Type "wireguard"}}WireGuard{{else}}Mot de passe{{end}}</td>
+      <td class="mono" data-label="IP réservée">{{.IPReservation}}</td>
+      <td data-label="Détails">{{if eq .Type "wireguard"}}keepalive {{.ConfWG.Keepalive}} s{{if .ConfWG.PSK}}, clé pré-partagée{{end}}{{else if .PasswordSet}}mot de passe défini{{else}}sans mot de passe{{end}}</td>
+      <td>
+        <div class="actions">
+          {{if and (eq .Type "wireguard") $.WG}}
+          <a class="ghost-btn" href="/vpn/config/{{$.WG}}/{{.Login}}">Télécharger<span class="sr-only"> la configuration de {{.Login}}</span></a>
+          <details class="inline">
+            <summary class="ghost-btn">QR code<span class="sr-only"> de {{.Login}}</span></summary>
+            <p class="hint">À scanner depuis l'appli WireGuard. Ce code contient la clé privée de l'appareil : ne le montre à personne.</p>
+            <img src="/vpn/qr/{{$.WG}}/{{.Login}}" loading="lazy" width="240" height="240" alt="QR code de la configuration WireGuard de {{.Login}}">
+          </details>
+          {{end}}
+          {{if and (eq .Type "standard") $.OpenVPN}}
+          <details class="inline">
+            <summary class="ghost-btn">Fichier OpenVPN<span class="sr-only"> de {{.Login}}</span></summary>
+            {{$login := .Login}}
+            {{range $.OpenVPN}}
+            <form method="post" action="/vpn/config/{{.}}/{{$login}}" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'ancien fichier de « {{$login}} » cessera de fonctionner.</label>
+              <button class="small">Télécharger ({{.}})</button>
+            </form>
+            {{end}}
+          </details>
+          {{end}}
+          <details class="inline">
+            <summary class="ghost-btn">Modifier<span class="sr-only"> {{.Login}}</span></summary>
+            <form method="post" action="/vpn/users/{{.Login}}/update" class="row">
+              {{if eq .Type "wireguard"}}
+              <label>IP réservée<input name="ip_reservation" value="{{.IPReservation}}" required></label>
+              <label>Keepalive (s)<input type="number" name="keepalive" value="{{.ConfWG.Keepalive}}" min="1" max="3600"></label>
+              <label class="check"><input type="checkbox" name="psk" value="1"{{if .ConfWG.PSK}} checked{{end}}> Clé pré-partagée</label>
+              {{else}}
+              <label>IP réservée<input name="ip_reservation" value="{{.IPReservation}}"></label>
+              <label>Nouveau mot de passe<input type="password" name="password" minlength="8" maxlength="32" autocomplete="new-password"></label>
+              {{end}}
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cela peut couper les appareils de « {{.Login}} » ou changer leur accès au réseau.</label>
+              <button class="small">Enregistrer</button>
+            </form>
+          </details>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Login}}</span></summary>
+            <form method="post" action="/vpn/users/{{.Login}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.Login}} » ne pourra plus se connecter et que son fichier de configuration sera perdu.</label>
+              <button class="danger small">Supprimer définitivement</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun utilisateur VPN.</p>{{end}}
+
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter un utilisateur</summary>
+    <form method="post" action="/vpn/users" class="stack">
+      <div class="row">
+        <label class="grow">Nom<input name="login" required maxlength="32"></label>
+        <label>Type
+          <select name="type">
+            <option value="wireguard">WireGuard</option>
+            <option value="standard">Mot de passe (OpenVPN, PPTP, IPsec)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label>IP réservée<input name="ip_reservation" placeholder="{{.Pool.IPStart}}"></label>
+        <label>Mot de passe (8 à 32)<input type="password" name="password" minlength="8" maxlength="32" autocomplete="new-password"></label>
+        <label>Keepalive WireGuard (s)<input type="number" name="keepalive" value="15" min="1" max="3600"></label>
+        <label class="check"><input type="checkbox" name="psk" value="1"> Clé pré-partagée</label>
+      </div>
+      <p class="hint">WireGuard : IP réservée obligatoire, dans la plage {{.Pool.IPStart}} – {{.Pool.IPEnd}}. Mot de passe : pour les autres types seulement.</p>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet utilisateur pourra accéder à ton réseau local depuis Internet tant qu'un serveur VPN est en marche.</label>
+      <button class="small">Ajouter</button>
+    </form>
+  </details>
+</section>
+
+<section class="card section">
+  <h2>Connexions actives</h2>
+  {{if .Conns}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Utilisateur</th><th scope="col">Serveur</th><th scope="col">Depuis</th><th scope="col">IP VPN</th><th scope="col">Reçu</th><th scope="col">Envoyé</th><th scope="col">Connecté le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Conns}}
+    <tr>
+      <td>{{.User}}</td>
+      <td data-label="Serveur">{{.VPN}}</td>
+      <td class="mono" data-label="Depuis">{{.SrcIP}}</td>
+      <td class="mono" data-label="IP VPN">{{.LocalIP}}</td>
+      <td data-label="Reçu">{{bytes .RX}}</td>
+      <td data-label="Envoyé">{{bytes .TX}}</td>
+      <td data-label="Connecté le">{{date .AuthTime}}</td>
+      <td>
+        <details class="inline">
+          <summary class="ghost-btn danger">Fermer<span class="sr-only"> la connexion de {{.User}}</span></summary>
+          <form method="post" action="/vpn/connections/{{.ID}}/close" class="stack">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.User}} » sera déconnecté.</label>
+            <button class="danger small">Fermer la connexion</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucune connexion active.</p>{{end}}
+</section>
+
+<section class="card section">
+  <h2>Adresses réservées</h2>
+  <p class="muted">Plage <span class="mono">{{.Pool.IPStart}} – {{.Pool.IPEnd}}</span></p>
+  {{if .Pool.Reservations}}
+  <dl>{{range .Pool.Reservations}}<dt>{{.Login}}</dt><dd class="mono">{{.IP}}</dd>{{end}}</dl>
+  {{else}}<p class="empty">Aucune réservation.</p>{{end}}
+</section>
+{{end}}
+{{end}}

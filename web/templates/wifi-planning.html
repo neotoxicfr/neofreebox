@@ -1,0 +1,35 @@
+{{define "title"}}Planning Wi-Fi · neofreebox{{end}}
+{{define "content"}}
+<h1>Planning Wi-Fi</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">Quand le planning est actif, le Wi-Fi est coupé pendant les créneaux décochés (une case = {{.SlotMin}} min). Si tu es connecté en Wi-Fi, tu perds l'accès à la box pendant ces plages.</p>
+<form method="post" action="/wifi-planning" class="stack">
+  <section class="card">
+    <label class="check"><input type="checkbox" name="use_planning" value="1"{{if .Plan.Use}} checked{{end}}> Utiliser le planning</label>
+  </section>
+  <section class="card table-wrap">
+    <table class="plan">
+      <thead>
+        <tr><th scope="col"><span class="sr-only">Jour</span></th>{{range .Hours}}<th scope="col" colspan="{{$.PerHour}}">{{.}}</th>{{end}}</tr>
+      </thead>
+      <tbody>
+      {{range .Days}}
+      <tr>
+        <th scope="row">{{.Name}}</th>
+        {{range .Slots}}<td><label class="check"><input type="checkbox" name="slot" value="{{.Index}}"{{if .On}} checked{{end}}><span class="sr-only">{{.Label}}</span></label></td>{{end}}
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </section>
+  <section class="card stack">
+    <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que le Wi-Fi sera coupé pendant les créneaux décochés.</label>
+    <div class="row">
+      <button>Enregistrer le planning</button>
+      <button class="ghost" name="preset" value="all">Tout cocher et enregistrer</button>
+      <button class="ghost" name="preset" value="night">Couper de 0 h à 6 h et enregistrer</button>
+    </div>
+  </section>
+</form>
+{{end}}
+{{end}}

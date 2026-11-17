@@ -1,0 +1,14 @@
+{{define "title"}}Premier lancement · neofreebox{{end}}
+{{define "content"}}
+<span class="logo">{{template "roundel"}}</span>
+<h1>Bienvenue</h1>
+<p class="muted">Crée le compte qui protège neofreebox. C'est le seul&nbsp;: il a la main sur toute la box.</p>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form method="post" action="/setup" class="card stack">
+  <label>Code de configuration <span class="hint">affiché dans les journaux du conteneur</span><input name="code" autocomplete="off" required autofocus spellcheck="false"></label>
+  <label>Identifiant<input name="username" autocomplete="username" required maxlength="64" value="{{.Username}}"></label>
+  <label>Mot de passe <span class="hint">12 caractères au moins</span><input name="password" type="password" autocomplete="new-password" required minlength="12"></label>
+  <label>Confirmation<input name="confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+  <button>Créer le compte</button>
+</form>
+{{end}}

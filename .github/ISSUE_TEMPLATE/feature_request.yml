@@ -1,23 +1,23 @@
-name: Feature request
-description: Suggest a capability or an option
+name: Proposer une fonction
+description: Suggérer une capacité ou une option
 labels: ["enhancement"]
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: What are you trying to achieve that is awkward or impossible today?
+      label: Problème
+      description: Que cherches-tu à faire qui est pénible ou impossible aujourd'hui ?
     validations:
       required: true
 
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
+      label: Solution proposée
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives considered
+      label: Alternatives envisagées

@@ -1,0 +1,131 @@
+{{define "title"}}Fichiers · neofreebox{{end}}
+{{define "content"}}
+<h1>Fichiers</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<nav aria-label="Fil d'Ariane" class="row">
+  {{range $i, $c := .Crumbs}}{{if $i}}<span class="muted">/</span>{{end}}<a href="/files?p={{$c.P}}">{{$c.Name}}</a>{{end}}
+</nav>
+
+<form id="sel" method="post" action="/files/copy">
+  <input type="hidden" name="p" value="{{.P}}">
+</form>
+
+<div class="card table-wrap section">
+{{if .Entries}}
+<table class="stack-sm">
+  <thead><tr><th scope="col">Nom</th><th scope="col">Taille</th><th scope="col">Modifié</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+  <tbody>
+  {{range .Entries}}
+  <tr>
+    <td><label class="check"><input type="checkbox" name="files" value="{{.Path}}" form="sel" aria-label="Sélectionner {{.Name}}">
+      {{if .IsDir}}<a href="/files?p={{.Path}}">{{.Name}}/</a>{{else}}<a href="/files/dl?p={{.Path}}" download>{{.Name}}</a>{{end}}</label></td>
+    <td data-label="Taille">{{if not .IsDir}}{{bytes .Size}}{{end}}</td>
+    <td data-label="Modifié">{{date .Modification}}</td>
+    <td>
+      <div class="actions">
+        <details class="inline">
+          <summary class="ghost-btn">Renommer<span class="sr-only"> {{.Name}}</span></summary>
+          <form method="post" action="/files/rename" class="row">
+            <input type="hidden" name="p" value="{{$.P}}"><input type="hidden" name="src" value="{{.Path}}">
+            <label class="grow">Nouveau nom<input name="name" value="{{.Name}}" required maxlength="255"></label>
+            <button class="small">Enregistrer</button>
+          </form>
+        </details>
+        {{if not .IsDir}}
+        <details class="inline">
+          <summary class="ghost-btn">Partager<span class="sr-only"> {{.Name}}</span></summary>
+          <form method="post" action="/files/share" class="stack">
+            <input type="hidden" name="p" value="{{$.P}}"><input type="hidden" name="target" value="{{.Path}}">
+            <label>Durée en jours (0 = sans limite)<input type="number" name="days" min="0" value="7"></label>
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toute personne ayant le lien pourra télécharger ce fichier depuis internet.</label>
+            <button class="small">Créer le lien</button>
+          </form>
+        </details>
+        {{end}}
+      </div>
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="empty">Ce dossier est vide.</p>{{end}}
+</div>
+
+{{if .Entries}}
+<section class="card section">
+  <h2>Pour la sélection</h2>
+  <div class="stack">
+    <div class="row">
+      <label class="grow">Destination (chemin, par exemple /Freebox/Photos)<input name="dest" form="sel" placeholder="{{.Cur}}"></label>
+      <label>Si le nom existe déjà
+        <select name="mode" form="sel"><option value="both">Garder les deux</option><option value="skip">Ignorer</option><option value="recent">Remplacer si plus récent</option><option value="overwrite">Remplacer</option></select>
+      </label>
+    </div>
+    <div class="row">
+      <button class="ghost" form="sel" formaction="/files/copy" formnovalidate>Copier</button>
+      <button class="ghost" form="sel" formaction="/files/move" formnovalidate>Déplacer</button>
+    </div>
+    <div class="row">
+      <label class="grow">Nom de l'archive<input name="archive" form="sel" placeholder="archive.zip"></label>
+      <button class="ghost" form="sel" formaction="/files/archive" formnovalidate>Archiver</button>
+    </div>
+    <label class="check"><input type="checkbox" name="confirm" value="1" form="sel" required> Je comprends que la suppression est définitive, et que « Remplacer » écrase les fichiers existants.</label>
+    <div class="row"><button class="danger" form="sel" formaction="/files/delete">Supprimer</button></div>
+  </div>
+</section>
+{{end}}
+
+<section class="card section">
+  <h2>Nouveau dossier</h2>
+  <form method="post" action="/files/mkdir" class="row">
+    <input type="hidden" name="p" value="{{.P}}">
+    <label class="grow">Nom<input name="name" required maxlength="255"></label>
+    <button>Créer</button>
+  </form>
+</section>
+
+{{if .Tasks}}
+<section class="card section table-wrap">
+  <h2>Tâches</h2>
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Type</th><th scope="col">État</th><th scope="col">Progression</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Tasks}}
+    <tr>
+      <td>{{.Type}}</td>
+      <td data-label="État">{{.State}}{{if ne .Error "none"}}{{if .Error}} ({{.Error}}){{end}}{{end}}</td>
+      <td data-label="Progression">{{.Progress}} %</td>
+      <td><details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> la tâche {{.Type}} {{.ID}}</span></summary>
+        <form method="post" action="/files/tasks/{{.ID}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera arrêtée si elle est en cours (les fichiers déjà traités restent).</label>
+          <button class="danger small">Retirer définitivement</button></form></details></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+
+{{if .Shares}}
+<section class="card section table-wrap">
+  <h2>Liens de partage</h2>
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Expire</th><th scope="col">Lien</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Shares}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td data-label="Expire">{{if .Expire}}{{date .Expire}}{{else}}jamais{{end}}</td>
+      <td data-label="Lien" class="mono">{{or .FullURL "accès distant désactivé"}}</td>
+      <td><details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> le lien {{.Name}}</span></summary>
+        <form method="post" action="/files/share/{{.Token}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le lien cessera de fonctionner pour tout le monde.</label>
+          <button class="danger small">Supprimer définitivement</button></form></details></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+{{end}}
+{{end}}

@@ -1,0 +1,86 @@
+{{define "title"}}WPS · neofreebox{{end}}
+{{define "content"}}
+<h1>WPS</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">Le WPS (appairage par bouton) permet d'appairer un appareil sans saisir la clé : tu ouvres une session ici, puis tu lances le WPS sur l'appareil. Une seule session à la fois.</p>
+<div class="grid">
+  <section class="card">
+    <h2>WPS</h2>
+    <p class="big"><span class="badge{{if .Enabled}} on{{end}}">{{if .Enabled}}activé{{else}}désactivé{{end}}</span></p>
+    {{if .Enabled}}
+    <form method="post" action="/wifi-wps/config"><input type="hidden" name="enabled" value="0"><button class="ghost">Désactiver le WPS</button></form>
+    {{else}}
+    <form method="post" action="/wifi-wps/config" class="stack">
+      <input type="hidden" name="enabled" value="1">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le WPS facilite l'accès au Wi-Fi à qui est près de la box.</label>
+      <button class="danger">Activer le WPS</button>
+    </form>
+    {{end}}
+  </section>
+  {{if .ActiveID}}
+  <section class="card">
+    <h2>Session ouverte</h2>
+    <p>Une session WPS attend un appareil.</p>
+    <form method="post" action="/wifi-wps/stop"><input type="hidden" name="session_id" value="{{.ActiveID}}"><button class="ghost">Fermer la session</button></form>
+  </section>
+  {{end}}
+</div>
+
+<section class="card table-wrap section">
+  <h2>Ouvrir une session</h2>
+  {{if .Nets}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Réseau</th><th scope="col">Bande</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <tbody>
+    {{range .Nets}}
+    <tr>
+      <td>{{.SSID}}</td>
+      <td data-label="Bande">{{band .Band}}</td>
+      <td>
+        {{if .Ready}}
+        <div class="actions">
+          <details class="inline">
+            <summary class="ghost-btn">Démarrer<span class="sr-only"> une session sur {{.SSID}}</span></summary>
+            <form method="post" action="/wifi-wps/start" class="stack">
+              <input type="hidden" name="bssid" value="{{.BSSID}}">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un appareil proche pourra rejoindre ce réseau sans la clé tant que la session est ouverte.</label>
+              <button class="small danger">Ouvrir la session</button>
+            </form>
+          </details>
+        </div>
+        {{else}}<span class="muted">{{.Why}}</span>{{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucun réseau.</p>{{end}}
+</section>
+
+<section class="card table-wrap section">
+  <h2>Historique</h2>
+  {{if .Sessions}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Début</th><th scope="col">Réseau</th><th scope="col">Résultat</th><th scope="col">Appareil</th></tr></thead>
+    <tbody>
+    {{range .Sessions}}
+    <tr>
+      <td>{{date .Start}}</td>
+      <td data-label="Réseau">{{.SSID}}</td>
+      <td data-label="Résultat">{{.ResultLabel}}</td>
+      <td class="mono" data-label="Appareil">{{if ne .MAC "00:00:00:00:00:00"}}{{.MAC}}{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <details class="inline section">
+    <summary class="ghost-btn danger">Effacer l'historique<span class="sr-only"> des sessions WPS</span></summary>
+    <form method="post" action="/wifi-wps/clear" class="stack">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'historique des sessions WPS sera effacé.</label>
+      <button class="danger small">Supprimer définitivement</button>
+    </form>
+  </details>
+  {{else}}<p class="empty">Aucune session.</p>{{end}}
+</section>
+{{end}}
+{{end}}

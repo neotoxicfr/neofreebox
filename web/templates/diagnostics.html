@@ -1,0 +1,35 @@
+{{define "title"}}Diagnostic · neofreebox{{end}}
+{{define "content"}}
+<h1>Diagnostic</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<section class="card table-wrap section">
+  <h2>Cibles de notification</h2>
+  <p class="muted">Téléphones et serveurs qui reçoivent les alertes de la box. Ils s'enregistrent depuis leur application ; ici tu peux seulement en retirer.</p>
+  {{if .Targets}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">Alertes</th><th scope="col">Dernier envoi</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Targets}}
+    <tr>
+      <td>{{or .Name "Sans nom"}}</td>
+      <td data-label="Type">{{.Type}}</td>
+      <td data-label="Alertes">{{.Events}}</td>
+      <td data-label="Dernier envoi">{{if .LastUse}}{{date .LastUse}}{{else}}jamais{{end}}</td>
+      <td>
+        <details class="inline">
+          <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Name "la cible sans nom"}}</span></summary>
+          <form method="post" action="/diagnostics/targets/{{.ID}}/delete" class="stack">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil ne recevra plus les alertes de la box.</label>
+            <button class="small danger">Supprimer définitivement</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucune cible de notification enregistrée.</p>{{end}}
+</section>
+<p class="hint">Le test de lenteur n'est pas disponible : la documentation de l'API n'en décrit pas les requêtes.</p>
+{{end}}
+{{end}}

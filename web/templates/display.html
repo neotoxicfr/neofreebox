@@ -1,0 +1,51 @@
+{{define "title"}}Écran et voyants · neofreebox{{end}}
+{{define "content"}}
+<h1>Écran et voyants</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+{{$c := .Cfg}}
+<form method="post" action="/display" class="stack">
+  <section class="card">
+    <h2>Écran</h2>
+    {{if $c.Has "brightness"}}<label>Luminosité (0 à 100)<input type="number" name="brightness" min="0" max="100" value="{{$c.Brightness}}"></label>{{end}}
+    {{if $c.Has "orientation_forced"}}<label class="check"><input type="checkbox" name="orientation_forced" value="1"{{if $c.OrientationForce}} checked{{end}}> Forcer l'orientation</label>{{end}}
+    {{if $c.Has "orientation"}}
+    <label>Orientation
+      <select name="orientation">{{range $c.Orientations}}<option value="{{.}}"{{if eq . $c.Orientation}} selected{{end}}>{{.}}°</option>{{end}}</select>
+    </label>
+    {{end}}
+    {{if $c.Has "hide_wifi_key"}}<label class="check"><input type="checkbox" name="hide_wifi_key" value="1"{{if $c.HideWifiKey}} checked{{end}}> Masquer la clé Wi-Fi et son QR code</label>{{end}}
+    {{if $c.Has "screensaver"}}
+    <label>Écran de veille
+      <select name="screensaver">{{range $c.Screensavers}}<option value="{{.Value}}"{{if eq .Value $c.Screensaver}} selected{{end}}>{{.Label}}</option>{{end}}</select>
+    </label>
+    {{end}}
+  </section>
+
+  {{if or ($c.Has "hide_status_led") $c.HasStrip}}
+  <section class="card">
+    <h2>Voyants</h2>
+    {{if $c.Has "hide_status_led"}}<label class="check"><input type="checkbox" name="hide_status_led" value="1"{{if $c.HideStatusLED}} checked{{end}}> Éteindre le voyant de statut</label>{{end}}
+    {{if $c.Has "led_strip_enabled"}}<label class="check"><input type="checkbox" name="led_strip_enabled" value="1"{{if $c.StripEnabled}} checked{{end}}> Bande lumineuse allumée</label>{{end}}
+    {{if $c.Has "led_strip_brightness"}}<label>Luminosité de la bande (0 à 100)<input type="number" name="led_strip_brightness" min="0" max="100" value="{{$c.StripBrightness}}"></label>{{end}}
+    {{if $c.Has "led_strip_animation"}}
+    <label>Animation de la bande
+      <select name="led_strip_animation">{{range $c.StripAnimations}}<option value="{{.}}"{{if eq . $c.StripAnimation}} selected{{end}}>{{.}}</option>{{end}}</select>
+    </label>
+    {{end}}
+  </section>
+  {{end}}
+  <div class="actions"><button>Enregistrer</button></div>
+</form>
+
+{{with .Strip}}
+<section class="card section">
+  <h2>Planning de la bande lumineuse</h2>
+  <form method="post" action="/display/ledstrip-planning" class="row">
+    <label class="check"><input type="checkbox" name="use_planning" value="1"{{if .UsePlanning}} checked{{end}}> Utiliser le planning enregistré sur la box</label>
+    <button class="ghost">Enregistrer</button>
+  </form>
+  {{if .NextChange}}<p class="muted">Prochain changement : {{date .NextChange}}</p>{{end}}
+</section>
+{{end}}
+{{end}}
+{{end}}

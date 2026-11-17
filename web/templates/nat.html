@@ -1,0 +1,151 @@
+{{define "title"}}Redirections · neofreebox{{end}}
+{{define "content"}}
+<h1>Redirections</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<section class="card table-wrap section">
+  <h2>Redirections de ports</h2>
+  {{if .Redirs}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Port externe</th><th scope="col">Protocole</th><th scope="col">Destination</th><th scope="col">Source</th><th scope="col">Commentaire</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Redirs}}
+    <tr>
+      <td><span class="badge{{if .Enabled}} on{{end}}">{{if .Enabled}}activé{{else}}désactivé{{end}}</span> Port <span class="mono">{{.WanPorts}}</span></td>
+      <td data-label="Protocole">{{.ProtoLabel}}</td>
+      <td data-label="Destination"><span class="mono">{{.LanIP}}:{{.LanPorts}}</span>{{if .Hostname}} <span class="muted">{{.Hostname}}</span>{{end}}</td>
+      <td data-label="Source" class="mono">{{if .AnySource}}toutes{{else}}{{.SrcIP}}{{end}}</td>
+      <td data-label="Commentaire">{{.Comment}}</td>
+      <td>
+        <div class="actions">
+          {{if .Enabled}}
+          <form method="post" action="/nat/redir/{{.ID}}/enabled"><input type="hidden" name="enabled" value="0"><button class="ghost small">Désactiver<span class="sr-only"> la redirection du port {{.WanPorts}}</span></button></form>
+          {{else}}
+          <details class="inline">
+            <summary class="ghost-btn">Activer<span class="sr-only"> la redirection du port {{.WanPorts}}</span></summary>
+            <form method="post" action="/nat/redir/{{.ID}}/enabled" class="stack">
+              <input type="hidden" name="enabled" value="1">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
+              <button class="small">Activer la redirection</button>
+            </form>
+          </details>
+          {{end}}
+          <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> la redirection du port {{.WanPorts}}</span></summary>
+            <form method="post" action="/nat/redir/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le service redirigé ne sera plus joignable depuis internet.</label>
+              <button class="danger small">Supprimer définitivement</button></form></details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucune redirection.</p>{{end}}
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter une redirection</summary>
+    <form method="post" action="/nat/redir" class="stack">
+      <div class="row">
+        <label>Protocole<select name="ip_proto"><option value="tcp">TCP</option><option value="udp">UDP</option></select></label>
+        <label>Port externe (début)<input name="wan_port_start" type="number" min="1" max="65535" required></label>
+        <label>Port externe (fin)<input name="wan_port_end" type="number" min="1" max="65535"></label>
+      </div>
+      <div class="row">
+        <label class="grow">Adresse IP de destination<input name="lan_ip" required inputmode="decimal" placeholder="192.168.1.42"></label>
+        <label>Port de destination<input name="lan_port" type="number" min="1" max="65535" required></label>
+        <label class="grow">Source autorisée<input name="src_ip" inputmode="decimal" placeholder="toutes (0.0.0.0)"></label>
+      </div>
+      <label>Commentaire<input name="comment" maxlength="64"></label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
+      <div><button class="small">Ajouter</button></div>
+    </form>
+  </details>
+</section>
+
+<div class="grid">
+<section class="card">
+  <h2>DMZ <span class="badge{{if .DMZ.Enabled}} on{{end}}">{{if .DMZ.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <p class="muted">L'appareil de la DMZ reçoit tout le trafic entrant non sollicité, sans filtrage.{{if .DMZ.IP}} Cible : <span class="mono">{{.DMZ.IP}}</span>.{{end}}</p>
+  <form method="post" action="/nat/dmz" class="stack">
+    <input type="hidden" name="enabled" value="1">
+    <label>Adresse IP de l'appareil<input name="ip" value="{{.DMZ.IP}}" required inputmode="decimal" placeholder="192.168.1.42"></label>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil sera entièrement exposé à internet.</label>
+    <button class="danger">{{if .DMZ.Enabled}}Appliquer{{else}}Activer la DMZ{{end}}</button>
+  </form>
+  {{if .DMZ.Enabled}}
+  <form method="post" action="/nat/dmz"><input type="hidden" name="enabled" value="0"><button class="ghost">Désactiver la DMZ</button></form>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>UPnP IGD <span class="badge{{if .UPnP.Enabled}} on{{end}}">{{if .UPnP.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <p class="muted">Permet aux appareils du réseau d'ouvrir eux-mêmes des ports vers internet.</p>
+  <p class="hint">UPnP IGD est le protocole que les consoles, logiciels de partage et caméras utilisent pour demander cette ouverture.</p>
+  <form method="post" action="/nat/upnp" class="stack">
+    <input type="hidden" name="enabled" value="1">
+    <label>Version<select name="version"><option value="1"{{if eq .UPnP.Version 1}} selected{{end}}>1</option><option value="2"{{if eq .UPnP.Version 2}} selected{{end}}>2</option></select></label>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout appareil du réseau pourra ouvrir des ports vers internet.</label>
+    <button class="danger">{{if .UPnP.Enabled}}Appliquer{{else}}Activer l'UPnP{{end}}</button>
+  </form>
+  {{if .UPnP.Enabled}}
+  <form method="post" action="/nat/upnp"><input type="hidden" name="enabled" value="0"><button class="ghost">Désactiver l'UPnP</button></form>
+  {{end}}
+</section>
+</div>
+
+<section class="card table-wrap section">
+  <h2>Redirections UPnP actives</h2>
+  {{if .UPnPRedirs}}
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Port externe</th><th scope="col">Protocole</th><th scope="col">Destination</th><th scope="col">Description</th><th scope="col">Expire dans</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .UPnPRedirs}}
+    <tr>
+      <td>Port <span class="mono">{{.ExtPort}}</span></td>
+      <td data-label="Protocole">{{.ProtoLabel}}</td>
+      <td data-label="Destination" class="mono">{{.IntIP}}:{{.IntPort}}</td>
+      <td data-label="Description">{{.Desc}}</td>
+      <td data-label="Expire dans">{{if .Remaining}}{{since .Remaining}}{{else}}jamais{{end}}</td>
+      <td>
+        <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> la redirection UPnP du port {{.ExtPort}}</span></summary>
+          <form method="post" action="/nat/upnp/redir/{{.ID}}/delete" class="stack">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'appareil qui l'a ouverte pourra la rouvrir.</label>
+            <button class="danger small">Supprimer définitivement</button></form></details>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucune redirection UPnP.</p>{{end}}
+</section>
+
+<section class="card table-wrap section">
+  <h2>Ports entrants des services de la box</h2>
+  <p class="muted">Ports ouverts sur l'adresse publique pour les services de la Freebox. Une redirection de la liste ci-dessus passe avant eux.</p>
+  <table class="stack-sm">
+    <thead><tr><th scope="col">Service</th><th scope="col">Protocole</th><th scope="col">Port</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Incoming}}
+    <tr>
+      <td><span class="badge{{if .Enabled}} on{{end}}">{{if .Enabled}}activé{{else}}désactivé{{end}}</span> {{.Label}}{{if and .Enabled .Active}} <span class="hint">en service</span>{{end}}</td>
+      <td data-label="Protocole">{{.ProtoLabel}}</td>
+      <td data-label="Port" class="mono">{{.InPort}}</td>
+      <td>
+        <div class="actions">
+          {{if .Enabled}}<form method="post" action="/nat/incoming/{{.ID}}"><input type="hidden" name="enabled" value="0"><button class="ghost small">Fermer<span class="sr-only"> le port {{.Label}}</span></button></form>{{end}}
+          <details class="inline">
+            <summary class="ghost-btn">{{if .Enabled}}Changer le port{{else}}Ouvrir{{end}}<span class="sr-only"> {{.Label}}</span></summary>
+            <form method="post" action="/nat/incoming/{{.ID}}" class="stack">
+              <input type="hidden" name="enabled" value="1">
+              {{if not .ReadOnly}}<label>Port<input name="in_port" type="number" min="{{.MinPort}}" max="{{.MaxPort}}" value="{{.InPort}}"></label>{{end}}
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce service sera joignable depuis internet.</label>
+              <button class="small">{{if .Enabled}}Enregistrer{{else}}Ouvrir le port{{end}}</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+{{end}}

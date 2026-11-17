@@ -1,0 +1,62 @@
+{{define "title"}}Box · neofreebox{{end}}
+{{define "content"}}
+<h1>Box</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+  <section class="card">
+    <h2>Informations</h2>
+    <dl>
+      <dt>Modèle</dt><dd>{{.Sys.ModelInfo.PrettyName}}</dd>
+      <dt>Firmware</dt><dd>{{.Sys.FirmwareVersion}}</dd>
+      <dt>Allumée depuis</dt><dd>{{since .Sys.Uptime}}</dd>
+      <dt>MAC</dt><dd class="mono">{{.Sys.MAC}}</dd>
+      <dt>Carte</dt><dd class="mono">{{.Sys.BoardName}}</dd>
+      <dt>Disque interne</dt><dd>{{.Sys.Disk}}</dd>
+      <dt>USB 3</dt><dd>{{if .Sys.USB3}}activé{{else}}désactivé{{end}}</dd>
+      {{range .Sys.Sensors}}<dt>{{.Name}}</dt><dd>{{.Value}} °C</dd>{{end}}
+      {{range .Sys.Fans}}<dt>{{.Name}}</dt><dd>{{.Value}} tr/min</dd>{{end}}
+    </dl>
+    <details class="inline">
+      <summary class="ghost-btn">Numéro de série</summary>
+      <p class="mono">{{.Sys.Serial}}</p>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Mise à jour</h2>
+    {{if .UpdateErr}}<p class="muted">Le statut de mise à jour n'est pas disponible.</p>{{else}}
+    <p><span class="badge{{if .Update.Bad}} off{{else if .Update.Busy}} warn{{else}} on{{end}}">{{.Update.Label}}</span></p>
+    {{if .Update.Busy}}
+    <p class="muted">{{.Update.UpgradeState.OldVersion}} → {{.Update.UpgradeState.NewVersion}}{{if .Update.UpgradeState.Percent}} ({{.Update.UpgradeState.Percent}} %){{end}}</p>
+    {{end}}
+    {{if .Update.UpgradeState.Error}}<p class="error">{{.Update.UpgradeState.Error}}</p>{{end}}
+    {{end}}
+    <p class="hint">L'API de la box ne permet que de consulter l'état : la box se met à jour toute seule.</p>
+  </section>
+
+  <section class="card">
+    <h2>Langue</h2>
+    {{if .LangErr}}<p class="muted">La langue n'est pas disponible.</p>{{else}}
+    <form method="post" action="/system/lang" class="row">
+      <label class="grow">Langue de la box
+        <select name="lang">{{range .Langs}}<option value="{{.Code}}"{{if .Current}} selected{{end}}>{{.Name}}</option>{{end}}</select>
+      </label>
+      <button>Enregistrer</button>
+    </form>
+    {{end}}
+  </section>
+
+  <section class="card">
+    <h2>Redémarrer ou éteindre</h2>
+    <form method="post" action="/system/reboot" class="stack">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le réseau sera coupé quelques minutes.</label>
+      <button class="danger">Redémarrer la Freebox</button>
+    </form>
+    <form method="post" action="/system/shutdown" class="stack section">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la box restera éteinte jusqu'à ce que je la rallume à la main.</label>
+      <button class="danger">Éteindre la Freebox</button>
+    </form>
+  </section>
+</div>
+{{end}}
+{{end}}

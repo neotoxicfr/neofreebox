@@ -1,50 +1,69 @@
-# Security Policy
+# Politique de sécurité
 
-## Supported versions
+## Versions prises en charge
 
-Only the latest release is supported. Fixes land on `dev` and ship in the next
-tag; there are no backports.
+Seule la dernière version est prise en charge. Les correctifs arrivent sur `dev` et
+partent dans le prochain tag ; il n'y a pas de rétroportage.
 
-| Version | Supported |
-| ------- | --------- |
-| latest release | ✅ |
-| `dev` | ⚠️ pre-release, no guarantees |
-| anything older | ❌ |
+| Version | Prise en charge |
+| ------- | --------------- |
+| dernière version | ✅ |
+| `dev` | ⚠️ préversion, sans garantie |
+| toute version plus ancienne | ❌ |
 
-## Reporting a vulnerability
+## Signaler une vulnérabilité
 
-Open a [private security advisory](https://github.com/neotoxicfr/neofreebox/security/advisories/new)
-rather than a public issue. Please include the version, the configuration
-involved, and a way to reproduce.
+Ouvre un [avis de sécurité privé](https://github.com/neotoxicfr/neofreebox/security/advisories/new)
+plutôt qu'une issue publique. Indique la version, la configuration concernée et un
+moyen de reproduire le problème.
 
-## Security model
+## Modèle de sécurité
 
-neofreebox holds a Freebox OS app token with every right on the box, so it is
-meant to sit behind an authenticating reverse proxy (Authelia, Authentik…) and
-also has its own login:
+neofreebox détient un jeton d'application Freebox OS avec tous les droits sur la box. Il
+est donc conçu pour se placer derrière un reverse proxy qui authentifie (Authelia,
+Authentik…) et possède aussi sa propre connexion :
 
-- A single account, created on first run. The password is hashed with bcrypt
-  in `account.json` in the data directory; sign-in attempts are rate-limited.
-- Sessions are `HttpOnly`, `Secure`, `SameSite=Lax` cookies kept in memory: a
-  restart signs you out.
-- Every state-changing request is a POST checked by Go's cross-origin
-  protection.
-- The app token is read from a file (`NEOFREEBOX_APP_TOKEN_FILE`), never sent
-  to the browser and never logged. Treat that file as a secret: it gives full
-  control of the box.
-- The box is reached over HTTPS, with Free's root certificates embedded.
+- Un seul compte, créé au premier lancement avec un code d'installation à usage unique
+  affiché uniquement dans le journal du conteneur : atteindre la page ne suffit pas. Le mot
+  de passe est haché avec bcrypt dans `account.json`, dans le dossier de données. Les
+  connexions échouées sont limitées à 10 par 15 minutes pour toute l'application (elle est
+  derrière un proxy, les IP des clients n'ont donc pas de sens). Quelqu'un qui franchirait
+  le proxy pourrait s'en servir pour te bloquer 15 minutes : compromis assumé.
+- Les sessions sont des cookies `HttpOnly`, `Secure`, `SameSite=Lax`, gardées en mémoire :
+  un redémarrage te déconnecte.
+- Toute requête qui modifie quelque chose est un POST vérifié par la protection
+  cross-origin de Go.
+- L'API JSON et le serveur MCP exigent un jeton porteur `nfb_…` créé depuis la page Compte.
+  Seule son empreinte SHA-256 est conservée (`tokens.json`) ; il n'est affiché qu'une fois et
+  se révoque à tout moment. Sa création redemande le mot de passe, et changer le mot de passe
+  révoque tous les jetons. Un jeton peut être limité à la **lecture seule** : il ne peut alors
+  appeler que des opérations qui ne modifient rien.
+- Une opération est **dangereuse** quand elle peut couper le réseau ou ton accès, effacer des
+  données, exposer la box ou le réseau local (port ouvert, DMZ, accès invité, partage sans mot
+  de passe, compte VPN), révéler un secret (clé Wi-Fi, configuration VPN) ou faire contacter
+  par la box une adresse arbitraire (téléchargement, notification, lecture sur un player).
+  Dans l'interface, elle demande une case de confirmation ; par l'API et le MCP, elle exige
+  `"confirm": true`, et le MCP l'annonce comme destructrice.
+- Le mode `NEOFREEBOX_READ_ONLY` refuse toute écriture avant qu'elle n'atteigne la box : utile
+  pour une démonstration ou un audit sur une vraie box.
+- Le jeton d'application est lu dans un fichier (`NEOFREEBOX_APP_TOKEN_FILE`), jamais envoyé
+  au navigateur ni écrit dans les journaux. Traite ce fichier comme un secret : il donne le
+  contrôle complet de la box.
+- La box est jointe en HTTPS, avec les certificats racine de Free embarqués.
+- `NEOFREEBOX_READ_ONLY=1` refuse toute écriture vers la box, pour une démonstration ou un essai.
 
-## Container hardening
+## Durcissement du conteneur
 
-The image is `distroless/static` (CA bundle and time zones, no shell, no
-package manager) running as a non-root user. The example compose adds
-`read_only: true`, `cap_drop: [ALL]` and `no-new-privileges:true`.
+L'image est `distroless/static` (certificats et fuseaux horaires, ni shell ni gestionnaire de
+paquets) et s'exécute sans droits root. Le compose d'exemple ajoute `read_only: true`,
+`cap_drop: [ALL]` et `no-new-privileges:true`.
 
-## Supply chain
+## Chaîne d'approvisionnement
 
-- Every GitHub Action is pinned to a full commit SHA, and the repository
-  *enforces* SHA pinning, so a hijacked tag cannot alter a workflow.
-- CI runs `govulncheck` and a Trivy filesystem scan (vulnerabilities, secrets, misconfigurations)
-  on every push to `dev`, every pull request and every release tag, and fails on a fixable
-  `CRITICAL`/`HIGH`. No image is published unless it passes.
-- Dependabot alerts and security updates are enabled.
+- Chaque GitHub Action est épinglée sur un SHA de commit complet, et le dépôt *impose* cet
+  épinglage : une étiquette détournée ne peut pas modifier un workflow.
+- La CI lance `govulncheck` et une analyse Trivy du système de fichiers (vulnérabilités,
+  secrets, mauvaises configurations) à chaque push sur `dev`, chaque pull request et chaque
+  tag de version, et échoue sur toute faille `CRITICAL`/`HIGH` corrigeable. Aucune image n'est
+  publiée sans ce passage.
+- Les alertes Dependabot et les mises à jour de sécurité sont activées.

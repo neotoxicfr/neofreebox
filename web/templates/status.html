@@ -1,0 +1,68 @@
+{{define "title"}}État · neofreebox{{end}}
+{{define "content"}}
+<h1>État de la Freebox</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<section class="trip" aria-labelledby="trip-title">
+  <h2 id="trip-title">En bref, d'internet jusqu'à chez toi</h2>
+  <ol class="plan-line">
+    <li class="stop terminus{{if ne .Conn.State "up"}} is-down{{end}}" data-line="Freebox">
+      <span class="stop-dot" aria-hidden="true"></span>
+      <a href="/connection"><span class="stop-name">Internet</span>
+        <span class="stop-state"><span class="dot {{if eq .Conn.State "up"}}up{{else}}down{{end}}" aria-hidden="true"></span>{{if eq .Conn.State "up"}}Connecté{{else}}{{.Conn.StateLabel}}{{end}}</span>
+        <span class="stop-fig">{{.Down}} <small>reçus</small></span>
+        <span class="stop-fig">{{.Up}} <small>envoyés</small></span></a>
+    </li>
+    <li class="stop" data-line="Système">
+      <span class="stop-dot" aria-hidden="true"></span>
+      <a href="/system"><span class="stop-name">La box</span>
+        <span class="stop-state">allumée depuis {{.Uptime}}</span>
+        <span class="stop-sub">{{.Conn.MediaLabel}}</span></a>
+    </li>
+    {{with .Brief}}
+    {{if .HasWifi}}<li class="stop" data-line="Wi-Fi">
+      <span class="stop-dot" aria-hidden="true"></span>
+      <a href="/wifi"><span class="stop-name">Wi-Fi</span>
+        <span class="stop-state"><span class="dot {{if .Wifi}}up{{else}}idle{{end}}" aria-hidden="true"></span>{{if .Wifi}}activé{{else}}désactivé{{end}}</span></a>
+    </li>{{end}}
+    {{if .HasHosts}}<li class="stop" data-line="Réseau">
+      <span class="stop-dot" aria-hidden="true"></span>
+      <a href="/devices"><span class="stop-name">Appareils</span>
+        <span class="stop-big">{{.Active}}</span>
+        <span class="stop-sub">connectés sur {{.Total}} vus par la box</span></a>
+    </li>{{end}}
+    {{if .HasCalls}}<li class="stop" data-line="Téléphonie">
+      <span class="stop-dot" aria-hidden="true"></span>
+      <a href="/calls"><span class="stop-name">Téléphone</span>
+        <span class="stop-big{{if .Unread}} is-new{{end}}">{{.Unread}}</span>
+        <span class="stop-sub">appels non lus</span></a>
+    </li>{{end}}
+    {{end}}
+  </ol>
+</section>
+
+<div class="duo">
+  <section class="lines-legend" aria-labelledby="legend-title">
+    <h2 id="legend-title">Toutes les lignes</h2>
+    <ul>{{range .Menu}}{{if ne .Name "Freebox"}}<li data-line="{{.Name}}"><a href="{{(index .Items 0).Href}}"><span class="pill">{{template "gicon" .Name}}</span><span class="legend-name">{{.Name}}</span><span class="legend-count">{{len .Items}} pages</span></a></li>{{end}}{{end}}</ul>
+  </section>
+  <section class="card" aria-labelledby="box-title">
+    <h2 id="box-title">Fiche de la box</h2>
+    <dl class="sheet">
+      <dt>Modèle</dt><dd>{{.System.ModelInfo.PrettyName}}</dd>
+      <dt>Firmware</dt><dd>{{.System.FirmwareVersion}}</dd>
+      <dt>IPv4</dt><dd class="mono">{{.Conn.IPv4}}</dd>
+      {{if .Conn.IPv6}}<dt>IPv6</dt><dd class="mono">{{.Conn.IPv6}}</dd>{{end}}
+      {{range .System.Sensors}}<dt>{{.Name}}</dt><dd>{{.Value}} °C</dd>{{end}}
+      {{range .System.Fans}}<dt>{{.Name}}</dt><dd>{{.Value}} tr/min</dd>{{end}}
+    </dl>
+  </section>
+</div>
+{{if .Rights}}
+<details class="inline section">
+  <summary class="ghost-btn">Droits accordés à neofreebox</summary>
+  <p class="hint">Identifiants des droits de l'application sur la box (Freebox OS, Gestion des accès).</p>
+  <ul class="tags">{{range .Rights}}<li>{{.}}</li>{{end}}</ul>
+</details>
+{{end}}
+{{end}}
+{{end}}

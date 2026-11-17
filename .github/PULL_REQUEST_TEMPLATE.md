@@ -1,21 +1,21 @@
-## What and why
+## Quoi et pourquoi
 
-<!-- What changes, and what problem it solves. Link an issue if there is one. -->
+<!-- Ce qui change et le problème que ça règle. Lie une issue s'il y en a une. -->
 
-## Checks
+## Vérifications
 
-- [ ] `make build` / `make lint` pass
-- [ ] `make test-race` passes (or `make test` with a note if no C toolchain)
-- [ ] `make vuln` clean
-- [ ] **UI touched?** checked at 1440×900 **and** on a phone viewport
-- [ ] `actionlint` clean *(only if `.github/workflows/` changed — every `uses:` pinned to a full SHA)*
-- [ ] No secret, token or personal data in the diff
+- [ ] `make build` et `make lint` passent
+- [ ] `make test-race` passe (ou `make test` avec une note si tu n'as pas de chaîne C)
+- [ ] `make vuln` est propre
+- [ ] **Interface touchée ?** vérifiée en 1440×900 **et** sur un affichage de téléphone
+- [ ] `actionlint` est propre *(seulement si `.github/workflows/` change : chaque `uses:` épinglé sur un SHA complet)*
+- [ ] Aucun secret, jeton ou donnée personnelle dans le diff
 
 ## Impact
 
-- [ ] **New Go dependency?** justified below
-- [ ] **New config option?** added to `config.go`, `README.md` **and** `deploy/compose.yml.example`
+- [ ] **Nouvelle dépendance Go ?** justifiée ci-dessous
+- [ ] **Nouvelle option de configuration ?** ajoutée à `cmd/neofreebox/main.go`, au `README.md` **et** à `deploy/compose.yml.example`
 
 ## Notes
 
-<!-- Anything a reviewer should know: trade-offs, follow-ups, things left out. -->
+<!-- Ce que le relecteur doit savoir : compromis, suites prévues, choses laissées de côté. -->

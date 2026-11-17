@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Security vulnerability
+  - name: Faille de sécurité
     url: https://github.com/neotoxicfr/neofreebox/security/advisories/new
-    about: Report privately via a security advisory — never in a public issue.
+    about: Signale-la en privé via un avis de sécurité, jamais dans une issue publique.
