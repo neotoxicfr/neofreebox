@@ -155,14 +155,20 @@ func client() (*fbx.Client, error) {
 
 func serve(ctx context.Context) error {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	demoMode, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_DEMO"))
+	demoMode, err := envBool("NEOFREEBOX_DEMO")
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+	readOnlyMode, err := envBool("NEOFREEBOX_READ_ONLY")
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
 	var c *fbx.Client
 	var box server.Box
 	if demoMode {
 		box = demo.New()
 		log.Warn("demo mode: fictional data, no box is contacted", "user", server.DemoUser, "password", server.DemoPassword)
 	} else {
-		var err error
 		if c, err = client(); err != nil {
 			return fmt.Errorf("serve: %w", err)
 		}
@@ -183,7 +189,7 @@ func serve(ctx context.Context) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	server.Version = version
-	if ro, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_READ_ONLY")); ro && c != nil {
+	if readOnlyMode && c != nil {
 		box = readOnly{c}
 		log.Warn("read-only mode: no write is sent to the box")
 	}
@@ -203,19 +209,22 @@ func serve(ctx context.Context) error {
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(sctx)
+		_ = srv.Shutdown(sctx) // waits for the requests in flight
 		if c != nil {
 			_ = c.Logout(sctx)
 		}
 	}()
 	log.Info("listening", "addr", srv.Addr, "version", version)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		return err
+		return err // failed to listen: no shutdown to wait for
 	}
+	<-stopped
 	return nil
 }
 
@@ -262,9 +271,28 @@ func healthcheck(ctx context.Context) error {
 	return nil
 }
 
+// envBool reads a boolean variable: unset is false, anything that is not a
+// boolean stops the start-up rather than silently meaning false.
+func envBool(name string) (bool, error) {
+	v := strings.TrimSpace(os.Getenv(name))
+	if v == "" {
+		return false, nil
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("%s=%q is not a boolean (true or false)", name, v)
+	}
+	return b, nil
+}
+
 // readOnly lets reads through and refuses every write, for demos, tests and
 // audits against a real box. rrd/ is read with a POST, so it passes.
 type readOnly struct{ *fbx.Client }
+
+// Get goes through the same check: vpn/download_config is a GET that writes.
+func (b readOnly) Get(ctx context.Context, path string, out any) error {
+	return b.Do(ctx, http.MethodGet, path, nil, out)
+}
 
 func (b readOnly) Do(ctx context.Context, method, path string, in, out any) error {
 	// vpn/download_config is a GET that regenerates an OpenVPN user's file.

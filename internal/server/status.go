@@ -76,7 +76,13 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		haveWifi = false
 	)
 	soft := func(ok *bool, path string, out any) {
-		g.Go(func() error { *ok = s.box.Get(gctx, path, out) == nil; return nil })
+		g.Go(func() error {
+			// Optional figures get a short leash: a slow one must not hold the page.
+			octx, cancel := context.WithTimeout(gctx, 3*time.Second)
+			defer cancel()
+			*ok = s.box.Get(octx, path, out) == nil
+			return nil
+		})
 	}
 	soft(&haveHost, "lan/browser/pub/", &hosts)
 	soft(&haveCall, "call/log/", &calls)

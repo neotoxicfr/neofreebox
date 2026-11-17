@@ -4,11 +4,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
@@ -37,6 +39,7 @@ var _ Box = (*fbx.Client)(nil)
 type Server struct {
 	box      Box
 	account  *account
+	authMu   sync.Mutex // serializes sign-in, token creation and password change
 	tokens   *tokenStore
 	sessions *sessions
 	limiter  *limiter
@@ -63,7 +66,10 @@ func (s *Server) EnableDemo() error {
 		return nil
 	}
 	s.setupCode = ""
-	return s.account.set(DemoUser, DemoPassword, true)
+	if err := s.account.set(DemoUser, DemoPassword, true); err != nil {
+		return fmt.Errorf("create demo account: %w", err)
+	}
+	return nil
 }
 
 // New loads the account from dataDir and parses the templates.

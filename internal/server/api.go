@@ -238,8 +238,11 @@ func describe(op ops.Op) string {
 	if op.Body && op.BodyHelp != "" {
 		d += " Body: " + op.BodyHelp
 	}
-	if op.Dangerous {
+	switch {
+	case op.Dangerous:
 		d += ` Dangerous: requires "confirm": true after the user agreed.`
+	case op.Secret:
+		d += ` Returns secrets (keys, passwords, share links): requires "confirm": true after the user agreed.`
 	}
 	return d
 }

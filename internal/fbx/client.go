@@ -60,6 +60,10 @@ func New(baseURL string, app App, token string) (*Client, error) {
 	if baseURL == "" {
 		baseURL = DefaultURL
 	}
+	if !strings.HasPrefix(baseURL, "https://") {
+		// The session token and the app token's proof travel in these requests.
+		return nil, fmt.Errorf("fbx: the box URL must use https, not %q", baseURL)
+	}
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(caPEM) {
 		return nil, errors.New("fbx: embedded CA certificates are invalid")
@@ -123,6 +127,13 @@ func (c *Client) Get(ctx context.Context, path string, out any) error {
 // ("lan/browser/pub/"). in, if not nil, is sent as JSON. A dropped session
 // is reopened once.
 func (c *Client) Do(ctx context.Context, method, path string, in, out any) error {
+	if _, ok := ctx.Deadline(); !ok {
+		// JSON answers are small: bound calls that come without a deadline
+		// (the CLI), so a stalled body cannot hold the session lock forever.
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+	}
 	sess, err := c.ensureSession(ctx)
 	if err != nil {
 		return err

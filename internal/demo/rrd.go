@@ -61,7 +61,7 @@ func (b *Box) rrd(in any) M {
 
 // noise is a deterministic value in [0, 1) for a timestamp and a series.
 func noise(t int64, seed int64) float64 {
-	x := uint64(t*2654435761 + seed*40503)
+	x := uint64(t*int64(2654435761) + seed*40503)
 	x ^= x >> 13
 	x *= 0x9E3779B97F4A7C15
 	x ^= x >> 29

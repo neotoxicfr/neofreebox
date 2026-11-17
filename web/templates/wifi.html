@@ -69,11 +69,11 @@
   {{if .APs}}
   {{range .APs}}
   <div class="section">
-    <p><strong>{{band .Config.Band}}</strong> <span class="badge{{with .Badge}} {{.}}{{end}}">{{.StateLabel}}</span>
+    <p><strong>{{.Label}}</strong> <span class="badge{{with .Badge}} {{.}}{{end}}">{{.StateLabel}}</span>
       <span class="muted">· canal {{.Channel}} · {{.Status.ChannelWidth}} MHz · réglé sur {{.Wanted}}, {{.Config.ChannelWidth}} MHz{{if .Config.DFS}} · canaux radar (DFS) autorisés{{end}}</span></p>
     <div class="actions">
       <details class="inline">
-        <summary class="ghost-btn">Modifier<span class="sr-only"> la radio {{band .Config.Band}}</span></summary>
+        <summary class="ghost-btn">Modifier<span class="sr-only"> la radio {{.Label}}</span></summary>
         <form method="post" action="/wifi/ap/{{.ID}}" class="stack">
           <div class="row">
             <label>Largeur<select name="channel_width">{{range .WidthOptions}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
@@ -88,7 +88,7 @@
         </form>
       </details>
       <details class="inline">
-        <summary class="ghost-btn">Redémarrer<span class="sr-only"> la radio {{band .Config.Band}}</span></summary>
+        <summary class="ghost-btn">Redémarrer<span class="sr-only"> la radio {{.Label}}</span></summary>
         <form method="post" action="/wifi/ap/{{.ID}}/restart" class="stack">
           <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande seront déconnectés un moment.</label>
           <button class="small danger">Redémarrer la radio</button>

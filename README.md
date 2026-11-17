@@ -117,8 +117,11 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
    La demande s'affiche sur l'écran du dessus de la Freebox Pop (allume-le s'il est éteint) :
    valide-la là, dans la minute ou deux qui suivent.
 
+   L'image tourne sans privilèges (UID 65532) : donne-lui d'abord les dossiers montés.
+
    ```bash
-   mkdir -p secrets
+   mkdir -p secrets data
+   sudo chown 65532:65532 secrets data && chmod 0700 secrets data
    docker run --rm -it -v "$PWD/secrets:/out" ghcr.io/neotoxicfr/neofreebox:latest \
      pair -o /out/freebox_app_token
    ```

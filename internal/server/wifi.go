@@ -576,3 +576,13 @@ func (s *Server) wifiReset(w http.ResponseWriter, r *http.Request) {
 	}
 	s.change(w, r, http.MethodPost, "wifi/config/reset/", nil, "Wi-Fi remis par défaut.", "/wifi")
 }
+
+// Label names a radio: its band, plus the box's own name when a band has
+// several radios (a Pop can report "5G" and "5G1", both on 5 GHz).
+func (a wifiAP) Label() string {
+	b := band(a.Config.Band)
+	if a.Name == "" || strings.EqualFold(strings.ReplaceAll(a.Name, ".", ""), strings.ReplaceAll(a.Config.Band, ".", "")) {
+		return b
+	}
+	return b + " (" + a.Name + ")"
+}

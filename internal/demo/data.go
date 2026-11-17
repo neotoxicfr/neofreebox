@@ -59,7 +59,7 @@ func (b *Box) static(path string, now int64) (any, bool) {
 	case "connection/":
 		return M{"state": "up", "type": "ethernet", "media": "ftth", "ipv4": publicIP, "ipv6": prefix6 + "1",
 			"ipv4_port_range": L{0, 65535}, "rate_down": 2_350_000, "rate_up": 310_000, "bandwidth_down": 1_000_000_000, "bandwidth_up": 600_000_000,
-			"bytes_down": 7_412_000_000_000, "bytes_up": 1_102_000_000_000}, true
+			"bytes_down": int64(7_412_000_000_000), "bytes_up": int64(1_102_000_000_000)}, true
 	case "connection/config/":
 		return M{"ping": true, "wol": false, "adblock": true, "adblock_not_set": false, "allow_token_request": false, "sip_alg": "disabled",
 			"remote_access": false, "remote_access_port": 8443, "remote_access_min_port": 8000, "remote_access_max_port": 9000,
@@ -191,7 +191,7 @@ func (b *Box) static(path string, now int64) (any, bool) {
 	case "vpn_client/status":
 		return M{"enabled": true, "active_vpn": "demo-client", "active_vpn_description": "Sortie en Europe (démo)", "type": "wireguard", "state": "up",
 			"last_error": "", "last_up": now - 86400, "last_try": now - 86400, "next_try": 0,
-			"stats": M{"rate_up": 12_000, "rate_down": 85_000, "bytes_up": 1_400_000_000, "bytes_down": 9_800_000_000},
+			"stats": M{"rate_up": 12_000, "rate_down": 85_000, "bytes_up": 1_400_000_000, "bytes_down": int64(9_800_000_000)},
 			"ipv4":  M{"ip_mask": M{"ip": "198.51.100.77", "mask": "255.255.255.255"}, "gateway": "198.51.100.1", "dns": L{"198.51.100.2"}}}, true
 	case "vpn_client/log":
 		return "démarrage du client WireGuard\nlien établi avec vpn.example.net\ntunnel actif", true
@@ -268,7 +268,7 @@ func (b *Box) static(path string, now int64) (any, bool) {
 	case "pvr/quota/":
 		return M{"quota_exceeded": false, "needed_tresh": 0, "cur_tresh": 0}, true
 	case "pvr/media/":
-		return L{M{"media": "Disque dur", "free_bytes": 640_000_000_000, "total_bytes": 1_000_000_000_000}}, true
+		return L{M{"media": "Disque dur", "free_bytes": int64(640_000_000_000), "total_bytes": int64(1_000_000_000_000)}}, true
 	case "pvr/programmed/":
 		return L{b.record(101, "Le journal du soir", "Édition de 20 h", 1, now+4*3600, now+4*3600+2400, "waiting_start_time", 0),
 			b.record(102, "Cinéma de minuit", "Comédie fictive", 3, now+30*3600, now+30*3600+6000, "waiting_start_time", 0)}, true

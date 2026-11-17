@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.classList.toggle('menu-open', toggle.open);
     if (main) main.inert = toggle.open;
   });
+  // Widening past the phone layout hides the menu button: close the menu so
+  // the page does not stay inert behind an invisible control.
+  const wide = window.matchMedia('(min-width: 861px)');
+  wide.addEventListener('change', () => {
+    if (wide.matches && toggle.open) toggle.open = false;
+  });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && toggle.open) {
       toggle.open = false;

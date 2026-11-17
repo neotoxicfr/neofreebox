@@ -5,7 +5,9 @@
 #
 # Le jeton d'application vient de `neofreebox pair -o freebox_app_token`, lancé
 # une fois sur ce réseau pendant que tu valides la demande sur l'écran de la
-# box. Donne le fichier à l'UID 65532 (l'utilisateur de l'image), en mode 0400.
+# box. Donne le fichier à l'UID 65532 (l'utilisateur de l'image), en mode 0400,
+# ainsi que le dossier de données, avant le premier lancement :
+#   mkdir -p data && sudo chown 65532:65532 data && chmod 0700 data
 services:
   neofreebox:
     image: ghcr.io/neotoxicfr/neofreebox:latest
@@ -15,6 +17,7 @@ services:
       NEOFREEBOX_APP_TOKEN_FILE: /run/secrets/freebox_app_token
       # NEOFREEBOX_BOX_URL: https://mafreebox.freebox.fr
       # NEOFREEBOX_READ_ONLY: "true"   # refuse toute écriture vers la box (démonstration, audit)
+      # NEOFREEBOX_DEMO: "true"        # fausse box et données fictives (utilise /tmp, voir tmpfs)
     secrets:
       - freebox_app_token
     volumes:
@@ -22,6 +25,8 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     read_only: true
+    tmpfs:
+      - /tmp:size=16m   # le mode démo y crée ses données temporaires
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true

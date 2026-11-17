@@ -36,7 +36,7 @@ func (b *Box) dynamic(path string, now int64) (any, bool) {
 	case parts[0] == "switch" && len(parts) >= 3 && parts[1] == "port":
 		id, _ := strconv.Atoi(parts[2])
 		if len(parts) > 3 {
-			return M{"rx_good_bytes": 52_000_000_000 * int64(id), "tx_bytes": 9_000_000_000 * int64(id), "rx_bytes_rate": 12_000 * int64(id), "tx_bytes_rate": 3_000 * int64(id),
+			return M{"rx_good_bytes": int64(52_000_000_000) * int64(id), "tx_bytes": int64(9_000_000_000) * int64(id), "rx_bytes_rate": 12_000 * int64(id), "tx_bytes_rate": 3_000 * int64(id),
 				"rx_good_packets": 41_000_000 * int64(id), "tx_packets": 22_000_000 * int64(id), "rx_err_packets": 0, "rx_fcs_packets": 0, "tx_collisions": 0}, true
 		}
 		return M{"speed": "auto", "duplex": "auto"}, true
@@ -114,7 +114,7 @@ func (b *Box) ls(enc string, now int64) any {
 		return M{"entries": L{file("budget-2026.ods", "/Freebox/Partages/budget-2026.ods", "application/vnd.oasis.opendocument.spreadsheet", 48_200, 3*86400),
 			file("recettes.pdf", "/Freebox/Partages/recettes.pdf", "application/pdf", 1_240_000, 40*86400)}}
 	case "/Freebox/Téléchargements":
-		return M{"entries": L{file("distribution-linux-demo.iso", "/Freebox/Téléchargements/distribution-linux-demo.iso", "application/x-iso9660-image", 2_900_000_000, 86400)}}
+		return M{"entries": L{file("distribution-linux-demo.iso", "/Freebox/Téléchargements/distribution-linux-demo.iso", "application/x-iso9660-image", int64(2_900_000_000), 86400)}}
 	case "/Freebox/Photos":
 		return M{"entries": L{dir("Vacances 2025", "/Freebox/Photos/Vacances 2025"), file("anniversaire.jpg", "/Freebox/Photos/anniversaire.jpg", "image/jpeg", 3_400_000, 12*86400)}}
 	case "/Freebox/Enregistrements":
@@ -171,12 +171,12 @@ func (b *Box) contacts() L {
 }
 
 func (b *Box) disks() L {
-	const total = 1_000_204_886_016
+	const total = int64(1_000_204_886_016)
 	return L{M{"id": 1, "type": "internal", "state": "enabled", "model": "Disque fictif 1 To", "serial": "DEMO-DISK-0001", "firmware": "DM01",
 		"table_type": "gpt", "total_bytes": total, "temp": 38, "spinning": true, "read_error_requests": 0, "write_error_requests": 0,
 		"operation_pct": M{"percent": 0},
 		"partitions": L{M{"id": 1, "disk_id": 1, "state": "mounted", "fstype": "ext4", "label": "Freebox", "total_bytes": total - 2_000_000_000,
-			"used_bytes": 412_000_000_000, "free_bytes": total - 2_000_000_000 - 412_000_000_000, "fsck_result": "no_run_yet", "operation_pct": M{"percent": 0}}}}}
+			"used_bytes": int64(412_000_000_000), "free_bytes": total - 2_000_000_000 - int64(412_000_000_000), "fsck_result": "no_run_yet", "operation_pct": M{"percent": 0}}}}}
 }
 
 func (b *Box) tasks(now int64) L {
@@ -187,7 +187,7 @@ func (b *Box) tasks(now int64) L {
 			"error": "none", "created_ts": now - int64(id)*7200, "eta": eta, "download_dir": dir, "stop_ratio": 150, "info_hash": strings.Repeat("0", 38) + strconv.Itoa(10+id)}
 	}
 	return L{
-		mk(1, "bt", "distribution-linux-demo.iso", "downloading", 2_900_000_000, 6420, 0, 4_200_000, 310_000, 1800),
+		mk(1, "bt", "distribution-linux-demo.iso", "downloading", int64(2_900_000_000), 6420, 0, 4_200_000, 310_000, 1800),
 		mk(2, "bt", "documents-libres-2026", "seeding", 780_000_000, 10000, 4300, 0, 70_000, 0),
 		mk(3, "http", "manuel-utilisateur.pdf", "queued", 18_000_000, 0, 0, 0, 0, 0),
 		mk(4, "http", "carte-regionale.zip", "done", 240_000_000, 10000, 0, 0, 0, 0),
@@ -235,7 +235,7 @@ func (b *Box) dlSub(parts []string, now int64) (any, bool) {
 	}
 	switch parts[1] {
 	case "files":
-		return L{M{"id": "1", "name": "contenu/image.iso", "size": 2_900_000_000, "rx": 1_861_800_000, "status": "downloading", "priority": "normal", "error": "none"}}, true
+		return L{M{"id": "1", "name": "contenu/image.iso", "size": int64(2_900_000_000), "rx": 1_861_800_000, "status": "downloading", "priority": "normal", "error": "none"}}, true
 	case "log":
 		return "tâche démarrée\nconnexion aux pairs\ntéléchargement en cours", true
 	case "trackers":

@@ -3,11 +3,11 @@
 <h1>Voisinage et appareils connectés</h1>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else if not .APs}}<p class="empty">Aucune radio.</p>{{else}}
 <nav class="row" aria-label="Radio">
-  {{range .APs}}<a class="ghost-btn" href="/wifi-radar?ap={{.ID}}"{{if eq $.Sel.ID .ID}} aria-current="page"{{end}}>{{band .Config.Band}}</a>{{end}}
+  {{range .APs}}<a class="ghost-btn" href="/wifi-radar?ap={{.ID}}"{{if eq $.Sel.ID .ID}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
 </nav>
 
 <section class="card table-wrap section">
-  <h2>Appareils connectés ({{band .Sel.Config.Band}})</h2>
+  <h2>Appareils connectés ({{.Sel.Label}})</h2>
   {{if .Stations}}
   <table class="stack-sm">
     <thead><tr><th scope="col">Appareil</th><th scope="col">Adresse MAC</th><th scope="col">Signal</th><th scope="col">Débit</th><th scope="col">Connecté depuis</th><th scope="col">Réception</th><th scope="col">Envoi</th></tr></thead>
@@ -65,7 +65,7 @@
     <summary class="ghost-btn">Relancer l'analyse</summary>
     <form method="post" action="/wifi-radar/scan" class="stack">
       <input type="hidden" name="ap" value="{{.Sel.ID}}">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{band .Sel.Config.Band}} est indisponible pendant l'analyse.</label>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{.Sel.Label}} est indisponible pendant l'analyse.</label>
       <button class="small danger">Lancer l'analyse</button>
     </form>
   </details>

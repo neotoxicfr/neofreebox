@@ -90,6 +90,10 @@ func Register(list ...Op) {
 		if op.Method == "" {
 			op.Method = http.MethodGet
 		}
+		// Deleting loses data: every DELETE asks for the confirmation.
+		if op.Method == http.MethodDelete {
+			op.Dangerous = true
+		}
 		all[op.Name] = op
 	}
 }
@@ -120,7 +124,7 @@ var ErrConfirm = errors.New(`this action can cut the network or access, lose dat
 
 // Call runs op with the given arguments and returns the box's result.
 func Call(ctx context.Context, box Box, op Op, args map[string]any) (json.RawMessage, error) {
-	if op.Dangerous {
+	if op.Dangerous || op.Secret { // revealing a secret is confirmed too
 		if c, _ := args["confirm"].(bool); !c {
 			return nil, ErrConfirm
 		}
@@ -231,7 +235,7 @@ func (op Op) Schema() map[string]any {
 		props["body"] = map[string]any{"type": t, "description": op.BodyHelp}
 		required = append(required, "body")
 	}
-	if op.Dangerous {
+	if op.Dangerous || op.Secret {
 		props["confirm"] = map[string]any{"type": "boolean", "description": "Must be true, and only after the user agreed: this action can cut the network or access, lose data, or expose the box or its secrets."}
 		required = append(required, "confirm")
 	}

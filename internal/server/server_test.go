@@ -12,7 +12,10 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type fakeBox struct{ err error }
@@ -205,5 +208,24 @@ func TestRedact(t *testing.T) {
 		if got := fbx.Redact(in); got != want {
 			t.Errorf("redact(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestLimiterReservesConcurrentAttempts(t *testing.T) {
+	l := &limiter{max: 10, window: time.Minute}
+	var passed atomic.Int32
+	var wg sync.WaitGroup
+	for range 50 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if l.allow() {
+				passed.Add(1)
+			}
+		}()
+	}
+	wg.Wait()
+	if n := passed.Load(); n != 10 {
+		t.Fatalf("%d concurrent attempts passed, want 10", n)
 	}
 }
