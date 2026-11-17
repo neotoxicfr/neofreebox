@@ -252,7 +252,7 @@ func (s *Server) mcpHandler() http.Handler {
 	})
 	for _, op := range ops.All() {
 		ro := op.ReadOnly() && !op.Secret // a client must not auto-approve reading a secret
-		destructive := !ro // the MCP default is true: say false only when nothing changes
+		destructive := !ro                // the MCP default is true: say false only when nothing changes
 		srv.AddTool(&mcp.Tool{
 			Name:        op.Name,
 			Description: describe(op),
