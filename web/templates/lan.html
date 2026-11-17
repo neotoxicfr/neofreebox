@@ -6,11 +6,12 @@
   <section class="card">
     <h2>Noms de la box</h2>
     <form method="post" action="/lan/names" class="stack">
-      <label>Nom<input name="name" value="{{.Name}}" required maxlength="63"></label>
-      <label>Nom DNS<input name="name_dns" value="{{.NameDNS}}" required maxlength="63"></label>
+      <label>Nom de la box<input name="name" value="{{.Name}}" required maxlength="63"></label>
+      <label>Nom DNS (utilisé par les appareils pour la trouver)<input name="name_dns" value="{{.NameDNS}}" required maxlength="63"></label>
       <label>Nom mDNS<input name="name_mdns" value="{{.NameMDNS}}" required maxlength="63"></label>
       <label>Nom NetBIOS<input name="name_netbios" value="{{.NameNetbios}}" required maxlength="63"></label>
       <label>Domaine local<input name="local_domain" value="{{.LocalDomain}}" required maxlength="63"></label>
+      <p class="hint">Les noms mDNS et NetBIOS servent à retrouver la box sur macOS, Linux et Windows.</p>
       <div class="actions"><button>Enregistrer</button></div>
     </form>
   </section>
@@ -36,20 +37,20 @@
   {{if .Routes}}
   <div class="table-wrap">
     <table class="stack-sm">
-      <thead><tr><th>Préfixe</th><th>Passerelle</th><th>État</th><th>Description</th><th><span class="sr-only">Actions</span></th></tr></thead>
+      <thead><tr><th scope="col">Préfixe</th><th scope="col">Passerelle</th><th scope="col">État</th><th scope="col">Description</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
       {{range $i, $r := .Routes}}
       <tr>
         <td class="mono">{{$r.Prefix}}</td>
         <td class="mono" data-label="Passerelle">{{$r.Gateway}}</td>
-        <td data-label="État"><span class="badge {{if $r.Enabled}}on{{else}}off{{end}}">{{if $r.Enabled}}active{{else}}inactive{{end}}</span></td>
+        <td data-label="État"><span class="badge{{if $r.Enabled}} on{{end}}">{{if $r.Enabled}}activé{{else}}désactivé{{end}}</span></td>
         <td data-label="Description">{{$r.Description}}</td>
         <td>
           <details class="inline">
-            <summary class="ghost-btn">Supprimer</summary>
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la route {{$r.Prefix}}</span></summary>
             <form method="post" action="/lan/routes/{{$i}}/delete" class="stack">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que supprimer une route peut couper l'accès à ce réseau.</label>
-              <button class="danger small">Supprimer</button>
+              <button class="danger small">Supprimer définitivement</button>
             </form>
           </details>
         </td>

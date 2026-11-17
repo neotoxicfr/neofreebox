@@ -86,7 +86,7 @@ func TestContactsWrites(t *testing.T) {
 	post(t, c, srv, "/contacts/3/edit", url.Values{"first_name": {"Alice"}, "last_name": {"Test"}, "company": {"Autre"}})
 	post(t, c, srv, "/contacts/3/numbers/add", url.Values{"type": {"work"}, "number": {"0199000000"}})
 	post(t, c, srv, "/contacts/3/emails/add", url.Values{"type": {"home"}, "email": {"a@example.org"}})
-	post(t, c, srv, "/contacts/3/numbers/11/delete", nil)
+	post(t, c, srv, "/contacts/3/numbers/11/delete", url.Values{"confirm": {"1"}})
 	post(t, c, srv, "/contacts/3/delete", url.Values{"confirm": {"1"}})
 
 	want := []string{
@@ -121,6 +121,7 @@ func TestContactsRefusals(t *testing.T) {
 	post(t, c, srv, "/contacts/add", url.Values{"number": {"0639980001"}})   // no name
 	post(t, c, srv, "/contacts/3/edit", url.Values{"notes": {"only notes"}}) // no name
 	post(t, c, srv, "/contacts/3/numbers/x/delete", nil)                     // bad related id
+	post(t, c, srv, "/contacts/3/numbers/11/delete", nil)                    // no confirmation
 	if w := box.lastWrites(); len(w) != 0 {
 		t.Fatalf("refused requests wrote %q", w)
 	}

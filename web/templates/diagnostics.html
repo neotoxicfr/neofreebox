@@ -7,7 +7,7 @@
   <p class="muted">Téléphones et serveurs qui reçoivent les alertes de la box. Ils s'enregistrent depuis leur application ; ici tu peux seulement en retirer.</p>
   {{if .Targets}}
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Type</th><th>Alertes</th><th>Dernier envoi</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">Alertes</th><th scope="col">Dernier envoi</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Targets}}
     <tr>
@@ -17,10 +17,10 @@
       <td data-label="Dernier envoi">{{if .LastUse}}{{date .LastUse}}{{else}}jamais{{end}}</td>
       <td>
         <details class="inline">
-          <summary class="ghost-btn danger">Supprimer</summary>
+          <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Name "la cible sans nom"}}</span></summary>
           <form method="post" action="/diagnostics/targets/{{.ID}}/delete" class="stack">
             <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil ne recevra plus les alertes de la box.</label>
-            <button class="small danger">Supprimer</button>
+            <button class="small danger">Supprimer définitivement</button>
           </form>
         </details>
       </td>

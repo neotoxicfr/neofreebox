@@ -79,13 +79,13 @@ func TestNATWrites(t *testing.T) {
 	send("/nat/redir", url.Values{"ip_proto": {"tcp"}, "wan_port_start": {"8443"}, "lan_ip": {"192.168.1.42"}, "lan_port": {"443"}, "comment": {"x"}, "confirm": {"1"}})
 	send("/nat/redir/2/enabled", url.Values{"enabled": {"1"}, "confirm": {"1"}})
 	send("/nat/redir/1/enabled", url.Values{"enabled": {"0"}})
-	send("/nat/redir/1/delete", nil)
+	send("/nat/redir/1/delete", url.Values{"confirm": {"1"}})
 	send("/nat/dmz", url.Values{"enabled": {"1"}, "ip": {"192.168.1.42"}, "confirm": {"1"}})
 	send("/nat/dmz", url.Values{"enabled": {"0"}})
 	send("/nat/incoming/https", url.Values{"enabled": {"1"}, "in_port": {"4443"}, "confirm": {"1"}})
 	send("/nat/incoming/https", url.Values{"enabled": {"0"}})
 	send("/nat/upnp", url.Values{"enabled": {"1"}, "version": {"1"}, "confirm": {"1"}})
-	send("/nat/upnp/redir/0.0.0.0-53644-udp/delete", nil)
+	send("/nat/upnp/redir/0.0.0.0-53644-udp/delete", url.Values{"confirm": {"1"}})
 	want := []string{
 		`POST fw/redir/ {"comment":"x","enabled":true,"ip_proto":"tcp","lan_ip":"192.168.1.42","lan_port":443,"src_ip":"0.0.0.0","wan_port_end":8443,"wan_port_start":8443}`,
 		`PUT fw/redir/2 {"enabled":true}`,
@@ -115,6 +115,8 @@ func TestNATExposureNeedsConfirm(t *testing.T) {
 	send("/nat/dmz", url.Values{"enabled": {"1"}, "ip": {"192.168.1.42"}})
 	send("/nat/incoming/https", url.Values{"enabled": {"1"}})
 	send("/nat/upnp", url.Values{"enabled": {"1"}, "version": {"2"}})
+	send("/nat/redir/1/delete", nil)
+	send("/nat/upnp/redir/0.0.0.0-53644-udp/delete", nil)
 	if len(box.writes) != 0 {
 		t.Fatalf("sent without confirm: %q", box.writes)
 	}

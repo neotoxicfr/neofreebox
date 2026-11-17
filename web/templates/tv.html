@@ -3,7 +3,7 @@
 <h1>Chaînes et guide</h1>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 {{if not .Bouquets}}<p class="empty">Aucun bouquet TV sur la box.</p>{{else}}
-<p class="muted">Bouquet « {{.Bouquet.Name}} » : {{len .Rows}} chaînes affichées sur {{.Bouquet.ChannelCount}}. Les enregistrements programmés sont dans <a href="/recordings">Enregistrements</a>.</p>
+<p class="muted">Bouquet « {{.Bouquet.Name}} » : {{len .Rows}} chaînes affichées sur {{.Total}}. Les enregistrements programmés sont dans <a href="/recordings">Enregistrements</a>.</p>
 {{if .EPGError}}<p class="error" role="alert">Le guide des programmes n'a pas répondu : {{.EPGError}}</p>{{end}}
 <form method="get" action="/tv" class="row">
   {{if gt (len .Bouquets) 1}}<label>Bouquet<select name="b">{{$sel := .Bouquet.ID}}{{range .Bouquets}}<option value="{{.ID}}"{{if eq .ID $sel}} selected{{end}}>{{.Name}}</option>{{end}}</select></label>{{end}}
@@ -14,26 +14,27 @@
 <div class="card table-wrap section">
 {{if .Rows}}
 <table class="stack-sm">
-  <thead><tr><th>Chaîne</th><th>En ce moment</th><th>Ensuite</th></tr></thead>
+  <thead><tr><th scope="col">Chaîne</th><th scope="col">En ce moment</th><th scope="col">Ensuite</th></tr></thead>
   <tbody>
   {{range .Rows}}
-  {{$ch := .UUID}}
+  {{$ch := .UUID}}{{$name := .Name}}
   <tr>
-    <td><span class="mono">{{.Number}}</span> {{.Name}}{{if not .Available}} <span class="badge off">indisponible</span>{{end}}</td>
+    <td><span class="mono">{{.Number}}</span> {{.Name}}{{if not .Available}} <span class="badge">indisponible</span>{{end}}</td>
     <td data-label="En ce moment">{{with .Now}}
       <div><strong>{{.Title}}</strong>{{if .SubTitle}} <span class="muted">· {{.SubTitle}}</span>{{end}}</div>
-      <div class="muted small">{{.Time}}{{if .Category}} · {{.Category}}{{end}}</div>
-      <form method="post" action="/tv/record"><input type="hidden" name="channel" value="{{$ch}}"><input type="hidden" name="start" value="{{.Start}}"><input type="hidden" name="end" value="{{.End}}"><input type="hidden" name="name" value="{{.Title}}"><input type="hidden" name="subname" value="{{.SubTitle}}"><button class="ghost small">Enregistrer la suite</button></form>
+      <div class="muted">{{.Time}}{{if .Category}} · {{.Category}}{{end}}</div>
+      <form method="post" action="/tv/record"><input type="hidden" name="channel" value="{{$ch}}"><input type="hidden" name="start" value="{{.Start}}"><input type="hidden" name="end" value="{{.End}}"><input type="hidden" name="name" value="{{.Title}}"><input type="hidden" name="subname" value="{{.SubTitle}}"><button class="ghost small">Enregistrer la suite<span class="sr-only"> de {{.Title}} sur {{$name}}</span></button></form>
     {{else}}<span class="muted">—</span>{{end}}</td>
     <td data-label="Ensuite">{{with .Next}}
       <div><strong>{{.Title}}</strong>{{if .SubTitle}} <span class="muted">· {{.SubTitle}}</span>{{end}}</div>
-      <div class="muted small">{{.Time}}{{if .Category}} · {{.Category}}{{end}}</div>
-      <form method="post" action="/tv/record"><input type="hidden" name="channel" value="{{$ch}}"><input type="hidden" name="start" value="{{.Start}}"><input type="hidden" name="end" value="{{.End}}"><input type="hidden" name="name" value="{{.Title}}"><input type="hidden" name="subname" value="{{.SubTitle}}"><button class="ghost small">Enregistrer</button></form>
+      <div class="muted">{{.Time}}{{if .Category}} · {{.Category}}{{end}}</div>
+      <form method="post" action="/tv/record"><input type="hidden" name="channel" value="{{$ch}}"><input type="hidden" name="start" value="{{.Start}}"><input type="hidden" name="end" value="{{.End}}"><input type="hidden" name="name" value="{{.Title}}"><input type="hidden" name="subname" value="{{.SubTitle}}"><button class="ghost small">Enregistrer<span class="sr-only"> {{.Title}} sur {{$name}}</span></button></form>
     {{else}}<span class="muted">—</span>{{end}}</td>
   </tr>
   {{end}}
   </tbody>
 </table>
+{{if .Truncated}}<p><a href="/tv?b={{.Bouquet.ID}}&q={{.Q}}{{if .All}}&all=1{{end}}&tout=1">Tout afficher ({{.Total}})</a></p>{{end}}
 {{else}}<p class="empty">Aucune chaîne ne correspond.</p>{{end}}
 </div>
 {{end}}

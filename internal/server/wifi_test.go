@@ -110,7 +110,7 @@ func wifiSession(t *testing.T, box wifiBox) (*httptest.Server, *http.Client, *[]
 func TestWifiPagesRender(t *testing.T) {
 	srv, c, _ := wifiSession(t, wifiBox{filter: "disabled"})
 	for path, want := range map[string][]string{
-		"/wifi":          {"Réseaux Wi-Fi", "Maison", "WPA2 (AES)", "2.4G", "canal 6", "cle-de-test-123", "sécurité faible", "Couper le Wi-Fi"},
+		"/wifi":          {"Réseaux Wi-Fi", "Maison", "WPA2 (AES)", "2,4 GHz", "canal 6", "cle-de-test-123", "sécurité faible", "Couper le Wi-Fi"},
 		"/wifi-guest":    {"Accès invités", "Invites", "soiree", "invite-key-456", "internet seulement"},
 		"/wifi-planning": {"Planning Wi-Fi", "Lundi", `name="slot"`, "60 min"},
 		"/wifi-filter":   {"Filtre MAC", "00:11:22:33:44:66", "tablette", "désactivé"},
@@ -200,7 +200,7 @@ func TestWifiWrites(t *testing.T) {
 		{"wps on", "/wifi-wps/config", with("enabled", "1"), "PUT", "wifi/wps/config/", `{"enabled":true}`, wifiBox{}},
 		{"wps start", "/wifi-wps/start", with("bssid", "00:11:22:33:44:55"), "POST", "wifi/wps/start/", `{"bssid":"00:11:22:33:44:55"}`, wifiBox{}},
 		{"wps stop", "/wifi-wps/stop", url.Values{"session_id": {"3"}}, "POST", "wifi/wps/stop/", `{"session_id":3}`, wifiBox{}},
-		{"wps clear", "/wifi-wps/clear", nil, "DELETE", "wifi/wps/sessions/", `null`, wifiBox{}},
+		{"wps clear", "/wifi-wps/clear", ok, "DELETE", "wifi/wps/sessions/", `null`, wifiBox{}},
 		{"scan", "/wifi-radar/scan", with("ap", "0"), "POST", "wifi/ap/0/neighbors/scan", `null`, wifiBox{}},
 	}
 	for _, tc := range tests {
@@ -254,6 +254,8 @@ func TestWifiDangerousNeedsConfirm(t *testing.T) {
 		{"filter on", "/wifi-filter/state", url.Values{"mac_filter_state": {"blacklist"}}, wifiBox{filter: "disabled"}},
 		{"filter add while active", "/wifi-filter/entries", url.Values{"mac": {"00:11:22:33:44:99"}, "type": {"blacklist"}}, wifiBox{filter: "blacklist"}},
 		{"filter delete while active", "/wifi-filter/entries/00:11:22:33:44:66/delete", nil, wifiBox{filter: "whitelist"}},
+		{"filter delete while inactive", "/wifi-filter/entries/00:11:22:33:44:66/delete", nil, wifiBox{filter: "disabled"}},
+		{"wps clear", "/wifi-wps/clear", nil, wifiBox{}},
 		{"planning cut", "/wifi-planning", url.Values{"use_planning": {"1"}, "preset": {"night"}}, wifiBox{}},
 		{"wps enable", "/wifi-wps/config", url.Values{"enabled": {"1"}}, wifiBox{}},
 		{"wps start", "/wifi-wps/start", url.Values{"bssid": {"00:11:22:33:44:55"}}, wifiBox{}},
@@ -314,9 +316,17 @@ func TestWifiGuestGeneratesKey(t *testing.T) {
 	}
 }
 
+func TestWifiDiagFixBodyIsArray(t *testing.T) {
+	for _, name := range []string{"wifi_ap_diag_fix", "wifi_bss_diag_fix"} {
+		if op, ok := ops.Get(name); !ok || !op.BodyArray {
+			t.Errorf("%s: body must be an array", name)
+		}
+	}
+}
+
 func TestWifiOpsDangerous(t *testing.T) {
 	for _, name := range []string{"wifi_config_set", "wifi_ap_update", "wifi_ap_restart", "wifi_bss_update", "wifi_config_reset",
-		"wifi_temp_disable_set", "wifi_planning_set", "wifi_mac_filter_delete", "wifi_wps_start", "wifi_guest_key_delete"} {
+		"wifi_temp_disable_set", "wifi_planning_set", "wifi_mac_filter_delete", "wifi_wps_start", "wifi_guest_key_delete", "wifi_guest_key_add"} {
 		op, ok := ops.Get(name)
 		if !ok || !op.Dangerous {
 			t.Errorf("%s: missing or not dangerous", name)

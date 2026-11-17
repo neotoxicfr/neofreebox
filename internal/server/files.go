@@ -56,30 +56,30 @@ func init() {
 				{Name: "cursor", Description: "Cursor returned by the previous call, to continue", Query: true}}},
 		ops.Op{Name: "files_info", Description: "Get the information of one file or folder.", Path: "fs/info/{path}", Params: []ops.Param{p("File path")}},
 		ops.Op{Name: "files_info_batch", Description: "Get the information of several paths at once; invalid paths are ignored.", Method: http.MethodPost,
-			Path: "fs/info", Body: true, BodyHelp: `["L0Rpc3F1ZSBkdXIvUGhvdG9z"]  (a JSON array of base64 paths)`},
+			Path: "fs/info", Body: true, BodyArray: true, Read: true, BodyHelp: `["L0Rpc3F1ZSBkdXIvUGhvdG9z"]  (a JSON array of base64 paths)`},
 		ops.Op{Name: "files_move", Description: "Start a task that moves files. mode resolves name conflicts: overwrite, both, recent or skip.", Method: http.MethodPost,
-			Path: "fs/mv/", Body: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 folder>", "mode": "both"}`},
+			Path: "fs/mv/", Body: true, Dangerous: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 folder>", "mode": "both"}`},
 		ops.Op{Name: "files_copy", Description: "Start a task that copies files. mode resolves name conflicts: overwrite, both, recent or skip.", Method: http.MethodPost,
-			Path: "fs/cp/", Body: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 folder>", "mode": "both"}`},
+			Path: "fs/cp/", Body: true, Dangerous: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 folder>", "mode": "both"}`},
 		ops.Op{Name: "files_remove", Description: "Start a task that deletes files and folders for good.", Method: http.MethodPost,
 			Path: "fs/rm/", Body: true, BodyHelp: `{"files": ["<base64 path>"]}`, Dangerous: true},
 		ops.Op{Name: "files_cat", Description: "Start a task that concatenates files into dst, optionally deleting the sources or overwriting dst.", Method: http.MethodPost,
 			Path: "fs/cat/", Body: true, Dangerous: true,
 			BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 path>", "multi_volumes": false, "delete_files": false, "overwrite": false, "append": true}`},
 		ops.Op{Name: "files_archive", Description: "Start a task that creates an archive (the extension of dst, such as .zip, sets the format).", Method: http.MethodPost,
-			Path: "fs/archive/", Body: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 path of the archive>"}`},
+			Path: "fs/archive/", Body: true, Dangerous: true, BodyHelp: `{"files": ["<base64 path>"], "dst": "<base64 path of the archive>"}`},
 		ops.Op{Name: "files_extract", Description: "Start a task that extracts an archive into a folder.", Method: http.MethodPost,
 			Path: "fs/extract/", Body: true, Dangerous: true,
 			BodyHelp: `{"src": "<base64 archive>", "dst": "<base64 folder>", "password": "", "delete_archive": false, "overwrite": false}`},
 		ops.Op{Name: "files_repair", Description: "Start a task that repairs files from a .par2 file.", Method: http.MethodPost,
 			Path: "fs/repair/", Body: true, BodyHelp: `{"src": "<base64 .par2 path>", "delete_archive": false}`},
 		ops.Op{Name: "files_hash", Description: "Start a task that hashes a file; read the result with files_task_hash once the task is done.", Method: http.MethodPost,
-			Path: "fs/hash/", Body: true, BodyHelp: `{"src": "<base64 path>", "hash_type": "sha1"}`},
+			Path: "fs/hash/", Body: true, Read: true, BodyHelp: `{"src": "<base64 path>", "hash_type": "sha1"}`},
 		ops.Op{Name: "files_mkdir", Description: "Create a folder (immediate, no task).", Method: http.MethodPost,
 			Path: "fs/mkdir/", Body: true, BodyHelp: `{"parent": "<base64 folder>", "dirname": "New folder"}`},
 		ops.Op{Name: "files_rename", Description: "Rename a file or folder (immediate); dst is the new name in clear text, without path. Returns the new base64 path.", Method: http.MethodPost,
 			Path: "fs/rename/", Body: true, BodyHelp: `{"src": "<base64 path>", "dst": "new name.txt"}`},
-		ops.Op{Name: "files_share_list", Description: "List the share links: token, path, name, expire (unix time, 0 = never), fullurl (empty if remote HTTP access is off).",
+		ops.Op{Name: "files_share_list", Secret: true, Description: "List the share links: token, path, name, expire (unix time, 0 = never), fullurl (empty if remote HTTP access is off).",
 			Path: "share_link/"},
 		ops.Op{Name: "files_share_get", Description: "Get one share link.", Path: "share_link/{token}", Params: []ops.Param{{Name: "token", Description: "Share link token"}}},
 		ops.Op{Name: "files_share_create", Description: "Create a share link to a file or folder: anyone with the URL can read it from the internet when remote HTTP access is on.", Method: http.MethodPost,
@@ -308,6 +308,9 @@ func (s *Server) shareDelete(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, "Lien invalide.")
 		return
 	}
+	if !confirmed(w, r, backTo(r)) {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "share_link/"+url.PathEscape(token), nil, "Lien de partage supprimé.", backTo(r))
 }
 
@@ -315,6 +318,9 @@ func (s *Server) taskDelete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil || id < 0 {
 		fail(w, r, "Tâche invalide.")
+		return
+	}
+	if !confirmed(w, r, backTo(r)) {
 		return
 	}
 	s.change(w, r, http.MethodDelete, "fs/tasks/"+strconv.Itoa(id), nil, "Tâche retirée.", backTo(r))

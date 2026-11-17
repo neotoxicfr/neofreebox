@@ -11,10 +11,19 @@ import (
 // networks, the channel usage and the channels the radio accepts.
 
 func init() {
-	register(module{Slug: "wifi-radar", Title: "Voisinage et stations", Group: "Wi-Fi", Order: 40, Routes: func(s *Server, mux *http.ServeMux) {
+	register(module{Slug: "wifi-radar", Title: "Voisinage et appareils", Group: "Wi-Fi", Order: 40, Routes: func(s *Server, mux *http.ServeMux) {
 		s.page(mux, "GET /wifi-radar", s.wifiRadar)
 		s.page(mux, "POST /wifi-radar/scan", s.wifiRadarScan)
 	}})
+}
+
+// capList keeps the first 100 rows unless all is set; total is the full size
+// when rows were cut, 0 otherwise.
+func capList[T any](list []T, all bool) (shown []T, total int) {
+	if all || len(list) <= 100 {
+		return list, 0
+	}
+	return list[:100], len(list)
 }
 
 type wifiStation struct {
@@ -127,6 +136,9 @@ func (s *Server) wifiRadar(w http.ResponseWriter, r *http.Request) {
 		s.soft(ctx, base+"/allowed_channel_comb", &combs)
 		sort.SliceStable(neighbors, func(i, j int) bool { return neighbors[i].Signal > neighbors[j].Signal })
 		sort.SliceStable(stations, func(i, j int) bool { return stations[i].Signal > stations[j].Signal })
+		all := r.URL.Query().Get("all") == "1"
+		stations, data["MoreStations"] = capList(stations, all)
+		neighbors, data["MoreNeighbors"] = capList(neighbors, all)
 		data["Sel"], data["Stations"], data["Neighbors"], data["Usage"], data["Combs"] = sel, stations, neighbors, usage, groupCombs(combs)
 	}
 	s.show(w, r, "wifi-radar", data, err)

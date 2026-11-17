@@ -22,9 +22,9 @@ func init() {
 		s.page(mux, "POST /vpn-client/{id}/delete", s.vpnClientDelete)
 	}})
 	ops.Register(
-		ops.Op{Name: "vpn_client_configs_list", Description: "List the VPN client configurations: id, description, type (pptp/openvpn/wireguard), active, conf_pptp / conf_wireguard (remote host, keys). Contains secrets.",
+		ops.Op{Name: "vpn_client_configs_list", Secret: true, Description: "List the VPN client configurations: id, description, type (pptp/openvpn/wireguard), active, conf_pptp / conf_wireguard (remote host, keys). Contains secrets.",
 			Path: "vpn_client/config/"},
-		ops.Op{Name: "vpn_client_config_get", Description: "Get one VPN client configuration.",
+		ops.Op{Name: "vpn_client_config_get", Secret: true, Description: "Get one VPN client configuration.",
 			Path: "vpn_client/config/{id}", Params: []ops.Param{{Name: "id", Description: `Configuration id, e.g. "vpn0"`}}},
 		ops.Op{Name: "vpn_client_config_add", Description: "Add a VPN client configuration. With active=true the box connects at once and routes all its traffic through the tunnel.", Method: http.MethodPost,
 			Path: "vpn_client/config/", Body: true, Dangerous: true,

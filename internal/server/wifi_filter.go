@@ -59,7 +59,8 @@ func (s *Server) wifiFilter(w http.ResponseWriter, r *http.Request) {
 			white++
 		}
 	}
-	s.show(w, r, "wifi-filter", map[string]any{"Cfg": cfg, "Entries": entries, "Whitelisted": white, "Active": cfg.MACFilter != "" && cfg.MACFilter != "disabled"}, err)
+	entries, more := capList(entries, r.URL.Query().Get("all") == "1")
+	s.show(w, r, "wifi-filter", map[string]any{"Cfg": cfg, "Entries": entries, "More": more, "Whitelisted": white, "Active": cfg.MACFilter != "" && cfg.MACFilter != "disabled"}, err)
 }
 
 // filterActive tells whether editing the list can already cut devices off.
@@ -151,7 +152,7 @@ func (s *Server) wifiFilterDelete(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
-	if !s.filterConfirmed(w, r, back) {
+	if !confirmed(w, r, back) {
 		return
 	}
 	s.change(w, r, http.MethodDelete, "wifi/mac_filter/"+url.PathEscape(id), nil, "Entrée supprimée.", back)

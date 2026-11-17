@@ -56,7 +56,7 @@ func lanSetup(t *testing.T) (*lanBox, func(string, url.Values), func(string) str
 func TestLanPage(t *testing.T) {
 	_, _, page := lanSetup(t)
 	body := page("/lan")
-	for _, want := range []string{"Freebox Server", "192.168.1.254", "home.example", "192.168.42.0/24", "192.168.1.38", "Lab", "inactive"} {
+	for _, want := range []string{"Freebox Server", "192.168.1.254", "home.example", "192.168.42.0/24", "192.168.1.38", "Lab", "désactivé"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page lacks %q", want)
 		}

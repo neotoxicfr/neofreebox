@@ -4,11 +4,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
@@ -37,6 +39,7 @@ var _ Box = (*fbx.Client)(nil)
 type Server struct {
 	box      Box
 	account  *account
+	authMu   sync.Mutex // serializes sign-in, token creation and password change
 	tokens   *tokenStore
 	sessions *sessions
 	limiter  *limiter
@@ -45,6 +48,28 @@ type Server struct {
 	// setupCode must be typed on the first-run form: it is only printed in
 	// the logs, so reaching the page is not enough to claim the box.
 	setupCode string
+	// demo shows the "fictional data" banner (see EnableDemo).
+	demo bool
+}
+
+// Demo account, created by EnableDemo and documented in the README.
+const (
+	DemoUser     = "demo"
+	DemoPassword = "demo-neofreebox"
+)
+
+// EnableDemo marks the server as a demo: a banner says the data is fictional,
+// and the demo account is created on first run so the app opens directly.
+func (s *Server) EnableDemo() error {
+	s.demo = true
+	if s.account.exists() {
+		return nil
+	}
+	s.setupCode = ""
+	if err := s.account.set(DemoUser, DemoPassword, true); err != nil {
+		return fmt.Errorf("create demo account: %w", err)
+	}
+	return nil
 }
 
 // New loads the account from dataDir and parses the templates.
@@ -82,7 +107,8 @@ func parsePages() (map[string]*template.Template, error) {
 		"version": func() string { return Version },
 		"bits":    bits,
 		"bytes":   byteSize,
-		"since":   func(sec int64) string { return duration(time.Duration(sec) * time.Second) },
+		"since":   func(sec int64) string { return shortDuration(time.Duration(sec) * time.Second) },
+		"band":    band,
 		"date":    func(unix int64) string { return time.Unix(unix, 0).Format("02/01/2006 15:04") },
 	}
 	names, err := fs.Glob(web.Templates, "templates/*.html")
@@ -106,7 +132,14 @@ func parsePages() (map[string]*template.Template, error) {
 // Handler returns the routes, wrapped in the security middleware.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("GET /static/", http.FileServerFS(web.Static))
+	static := http.FileServerFS(web.Static)
+	mux.Handle("GET /static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Asset URLs carry ?v=<version>: a new release changes the URL.
+		if r.URL.Query().Has("v") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		static.ServeHTTP(w, r)
+	}))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
 	mux.HandleFunc("GET /setup", s.setupPage)
 	mux.HandleFunc("POST /setup", s.setup)
@@ -151,8 +184,8 @@ func (s *Server) guard(next http.HandlerFunc) http.Handler {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		if r.Method == http.MethodPost && !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
-			r.Body = http.MaxBytesReader(w, r.Body, maxForm)
+		if r.Method == http.MethodPost {
+			r.Body = http.MaxBytesReader(w, r.Body, maxForm) // no form uploads a file
 		}
 		next(w, r)
 	})
@@ -165,6 +198,7 @@ func (s *Server) render(w http.ResponseWriter, status int, page string, data map
 		data = map[string]any{}
 	}
 	data["Menu"] = menu()
+	data["Demo"] = s.demo
 	var buf bytes.Buffer
 	if err := s.pages[page].Execute(&buf, data); err != nil {
 		s.log.Error("render", "page", page, "err", err)

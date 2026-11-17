@@ -4,7 +4,7 @@
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 <div class="grid">
 <section class="card">
-  <h2>Serveur DHCP IPv4 <span class="badge {{if .Config.Enabled}}on{{else}}off{{end}}">{{if .Config.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <h2>Serveur DHCP IPv4 <span class="badge{{if .Config.Enabled}} on{{end}}">{{if .Config.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
   <p class="muted">Passerelle <span class="mono">{{.Config.Gateway}}</span>, masque <span class="mono">{{.Config.Netmask}}</span>.</p>
   {{if .Config.Enabled}}
   <form method="post" action="/dhcp/enabled" class="stack">
@@ -18,7 +18,12 @@
 </section>
 
 <section class="card">
-  <h2>DHCPv6 <span class="badge {{if .V6.Enabled}}on{{else}}off{{end}}">{{if .V6.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <h2>DHCPv6 <span class="badge{{if .V6.Enabled}} on{{end}}">{{if .V6.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
+  <form method="post" action="/dhcp/v6/dns" class="stack">
+    <label class="check"><input type="checkbox" name="use_custom_dns" value="1"{{if .V6.UseCustomDNS}} checked{{end}}> Utiliser des serveurs DNS IPv6 personnalisés</label>
+    {{if .V6.DNS}}<p class="muted">Serveurs : {{range $i, $d := .V6.DNS}}{{if $i}}, {{end}}<span class="mono">{{$d}}</span>{{end}}</p>{{end}}
+    <div><button class="ghost">Enregistrer le réglage DNS</button></div>
+  </form>
   {{if .V6.Enabled}}
   <form method="post" action="/dhcp/v6/enabled" class="stack">
     <input type="hidden" name="enabled" value="0">
@@ -32,11 +37,6 @@
     <button>Activer le DHCPv6</button>
   </form>
   {{end}}
-  <form method="post" action="/dhcp/v6/dns" class="stack">
-    <label class="check"><input type="checkbox" name="use_custom_dns" value="1"{{if .V6.UseCustomDNS}} checked{{end}}> Utiliser des serveurs DNS IPv6 personnalisés</label>
-    {{if .V6.DNS}}<p class="muted">Serveurs : {{range $i, $d := .V6.DNS}}{{if $i}}, {{end}}<span class="mono">{{$d}}</span>{{end}}</p>{{end}}
-    <button class="ghost">Enregistrer</button>
-  </form>
 </section>
 </div>
 
@@ -54,10 +54,12 @@
       <label class="grow">Serveur de démarrage (TFTP)<input name="boot_server" value="{{.Config.BootServer}}"></label>
       <label class="grow">Fichier de démarrage<input name="boot_file" value="{{.Config.BootFile}}"></label>
     </div>
+    <p class="hint">Démarrage réseau (PXE) : à laisser vide si tu ne sais pas à quoi cela sert. Un serveur mal choisi fait démarrer tes appareils sur un système étranger.</p>
     <label class="check"><input type="checkbox" name="sticky_assign" value="1"{{if .Config.StickyAssign}} checked{{end}}> Toujours attribuer la même adresse à un appareil</label>
     <label class="check"><input type="checkbox" name="always_broadcast" value="1"{{if .Config.AlwaysBroadcast}} checked{{end}}> Toujours répondre en diffusion</label>
     <label class="check"><input type="checkbox" name="ignore_out_of_range_hint" value="1"{{if .Config.IgnoreOutOfRangeHint}} checked{{end}}> Ignorer l'adresse demandée si elle est hors plage</label>
-    <div><button>Enregistrer</button></div>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages sont distribués à tous les appareils du réseau.</label>
+    <div><button class="danger">Enregistrer</button></div>
   </form>
 </section>
 
@@ -65,7 +67,7 @@
   <h2>Baux statiques</h2>
   {{if .Static}}
   <table class="stack-sm">
-    <thead><tr><th>Adresse IP</th><th>MAC</th><th>Nom</th><th>Commentaire</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Adresse IP</th><th scope="col">MAC</th><th scope="col">Nom</th><th scope="col">Commentaire</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Static}}
     <tr>
@@ -76,14 +78,17 @@
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Modifier</summary>
+            <summary class="ghost-btn">Modifier<span class="sr-only"> le bail {{.IP}}</span></summary>
             <form method="post" action="/dhcp/static/{{.ID}}/update" class="row">
               <label>Adresse IP<input name="ip" value="{{.IP}}" required inputmode="decimal"></label>
               <label class="grow">Commentaire<input name="comment" value="{{.Comment}}" maxlength="64"></label>
               <button class="small">Enregistrer</button>
             </form>
           </details>
-          <form method="post" action="/dhcp/static/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+          <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> le bail {{.IP}}</span></summary>
+            <form method="post" action="/dhcp/static/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil pourra recevoir une autre adresse.</label>
+              <button class="danger small">Supprimer définitivement</button></form></details>
         </div>
       </td>
     </tr>
@@ -106,20 +111,20 @@
   <h2>Baux dynamiques actifs</h2>
   {{if .Dynamic}}
   <table class="stack-sm">
-    <thead><tr><th>Adresse IP</th><th>MAC</th><th>Nom</th><th>Reste</th><th>Attribué le</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Adresse IP</th><th scope="col">MAC</th><th scope="col">Nom</th><th scope="col">Reste</th><th scope="col">Attribué le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Dynamic}}
     <tr>
-      <td class="mono">{{.IP}}{{if .IsStatic}} <span class="badge on">statique</span>{{end}}</td>
+      <td class="mono">{{.IP}}{{if .IsStatic}} <span class="badge">statique</span>{{end}}</td>
       <td class="mono" data-label="MAC">{{.MAC}}</td>
       <td data-label="Nom">{{.Name}}</td>
-      <td data-label="Reste">{{since .LeaseRemaining}}</td>
+      <td data-label="Reste">{{if .IsStatic}}permanent{{else}}{{since .LeaseRemaining}}{{end}}</td>
       <td data-label="Attribué le">{{date .AssignTime}}</td>
       <td>
         {{if not .IsStatic}}
         <form method="post" action="/dhcp/static">
           <input type="hidden" name="mac" value="{{.MAC}}"><input type="hidden" name="ip" value="{{.IP}}"><input type="hidden" name="comment" value="{{.Name}}">
-          <button class="ghost small">Rendre fixe</button>
+          <button class="ghost small">Rendre fixe<span class="sr-only"> {{or .Name .IP}}</span></button>
         </form>
         {{end}}
       </td>
@@ -127,6 +132,7 @@
     {{end}}
     </tbody>
   </table>
+  {{if gt .DynamicTotal (len .Dynamic)}}<p><a href="/dhcp?all=1">Tout afficher ({{.DynamicTotal}})</a></p>{{end}}
   {{else}}<p class="empty">Aucun bail actif.</p>{{end}}
 </section>
 {{end}}

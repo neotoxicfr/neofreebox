@@ -71,21 +71,21 @@ func init() {
 		ops.Op{Name: "wifi_ap_diag_get", Description: "List the diagnostic items of a radio (severity minor or major, code).",
 			Path: "wifi/ap/{id}/diag", Params: []ops.Param{apID}},
 		ops.Op{Name: "wifi_ap_diag_fix", Description: "Apply the suggested fix of diagnostic codes on a radio (all, channel_width, channel_value). This changes the radio configuration.",
-			Method: http.MethodPost, Path: "wifi/ap/{id}/diag", Params: []ops.Param{apID}, Body: true, Dangerous: true,
+			Method: http.MethodPost, Path: "wifi/ap/{id}/diag", Params: []ops.Param{apID}, Body: true, BodyArray: true, Dangerous: true,
 			BodyHelp: `a JSON array of codes: ["channel_width", "channel_value"]`},
-		ops.Op{Name: "wifi_bss_list", Description: "List the Wi-Fi networks (BSS): id (MAC), phy_id, use_shared_params, config (enabled, ssid, encryption, hide_ssid, key, wps_enabled), status (state, sta_count) and the shared parameters. The key is returned in clear.",
+		ops.Op{Name: "wifi_bss_list", Secret: true, Description: "List the Wi-Fi networks (BSS): id (MAC), phy_id, use_shared_params, config (enabled, ssid, encryption, hide_ssid, key, wps_enabled), status (state, sta_count) and the shared parameters. The key is returned in clear.",
 			Path: "wifi/bss/"},
-		ops.Op{Name: "wifi_bss_get", Description: "Get one Wi-Fi network (BSS), key included.",
+		ops.Op{Name: "wifi_bss_get", Secret: true, Description: "Get one Wi-Fi network (BSS), key included.",
 			Path: "wifi/bss/{id}", Params: []ops.Param{bssID}},
 		ops.Op{Name: "wifi_bss_update", Description: "Change a Wi-Fi network: ssid, encryption, key, hide_ssid, enabled. Changing the name, the key or the security disconnects every device, yours included.",
 			Method: http.MethodPut, Path: "wifi/bss/{id}", Params: []ops.Param{bssID}, Body: true, Dangerous: true,
 			BodyHelp: `{"config": {"ssid": "MyNetwork", "encryption": "wpa2_psk_ccmp", "key": "at least 8 characters", "hide_ssid": false, "enabled": true}}`},
-		ops.Op{Name: "wifi_bss_default", Description: "Get the default configuration of a Wi-Fi network (what a reset would apply).",
+		ops.Op{Name: "wifi_bss_default", Secret: true, Description: "Get the default configuration of a Wi-Fi network (what a reset would apply).",
 			Path: "wifi/bss/{id}/default", Params: []ops.Param{bssID}},
 		ops.Op{Name: "wifi_bss_diag_get", Description: "List the diagnostic items of a Wi-Fi network (network_disabled, network_security, network_visibility, all).",
 			Path: "wifi/bss/{id}/diag", Params: []ops.Param{bssID}},
 		ops.Op{Name: "wifi_bss_diag_fix", Description: "Apply the suggested fix of diagnostic codes on a Wi-Fi network. This changes its configuration (security, visibility).",
-			Method: http.MethodPost, Path: "wifi/bss/{id}/diag", Params: []ops.Param{bssID}, Body: true, Dangerous: true,
+			Method: http.MethodPost, Path: "wifi/bss/{id}/diag", Params: []ops.Param{bssID}, Body: true, BodyArray: true, Dangerous: true,
 			BodyHelp: `a JSON array of codes: ["network_security", "network_visibility"]`},
 		ops.Op{Name: "wifi_bss_mlo_allowed", Description: "List the radio combinations a network can use for Multi-Link Operation (Wi-Fi 7), e.g. [[0, 10], [0]]. Not every box supports it.",
 			Path: "wifi/bss/{id}/mlo/allowed_comb", Params: []ops.Param{bssID}},
@@ -94,7 +94,7 @@ func init() {
 		ops.Op{Name: "wifi_bss_mlo_set", Description: "Set the Multi-Link Operation partners of a network, from wifi_bss_mlo_allowed. Can briefly drop the devices on that network.",
 			Method: http.MethodPut, Path: "wifi/bss/{id}/mlo/config/", Params: []ops.Param{bssID}, Body: true, Dangerous: true,
 			BodyHelp: `{"partners": [0, 10]}`},
-		ops.Op{Name: "wifi_defaults_get", Description: "Get the default configuration of every radio (aps) and network (bsss) in one call. The default keys are returned in clear.",
+		ops.Op{Name: "wifi_defaults_get", Secret: true, Description: "Get the default configuration of every radio (aps) and network (bsss) in one call. The default keys are returned in clear.",
 			Path: "wifi/default"},
 		ops.Op{Name: "wifi_diag_get", Description: "Global Wi-Fi diagnostic: aps and bsss items with severity (minor or major) and code.",
 			Path: "wifi/diag"},
@@ -166,11 +166,11 @@ type wifiState struct {
 func (st wifiState) Label() string {
 	switch st.State {
 	case "enabled":
-		return "Wi-Fi actif"
+		return "activé"
 	case "disabled":
-		return "Wi-Fi coupé"
+		return "désactivé"
 	case "disabled_planning":
-		return "Wi-Fi coupé par le planning"
+		return "désactivé par le planning"
 	}
 	return st.State
 }
@@ -202,7 +202,7 @@ func (a wifiAP) StateLabel() string {
 		"scanning": "analyse des canaux", "no_param": "non configuré", "bad_param": "configuration invalide",
 		"disabled": "désactivé", "disabled_planning": "coupé par le planning", "disabled_power_saving": "coupé (économie d'énergie)",
 		"disabled_temp": "coupé temporairement", "no_active_bss": "aucun réseau actif", "starting": "démarrage", "stopping": "arrêt",
-		"acs": "choix du canal", "ht_scan": "analyse des voisins", "dfs": "détection radar (DFS)", "active": "actif", "failed": "en échec",
+		"acs": "choix du canal", "ht_scan": "analyse des voisins", "dfs": "attente des radars (DFS)", "active": "en marche", "failed": "en échec",
 	}
 	if l, ok := labels[a.Status.State]; ok {
 		return l
@@ -211,6 +211,22 @@ func (a wifiAP) StateLabel() string {
 }
 
 func (a wifiAP) Active() bool { return a.Status.State == "active" }
+
+// Badge is the badge modifier: green when running, red on failure, orange
+// when the configuration is wrong, neutral otherwise (off, planning, starting).
+func (a wifiAP) Badge() string { return wifiBadge(a.Status.State, "active") }
+
+func wifiBadge(state, active string) string {
+	switch state {
+	case active:
+		return "on"
+	case "failed":
+		return "off"
+	case "no_param", "bad_param":
+		return "warn"
+	}
+	return ""
+}
 
 // Channel is the channel in use, with its secondary channel when there is one.
 func (a wifiAP) Channel() string {
@@ -264,7 +280,7 @@ type wifiBSS struct {
 		Stations   int    `json:"sta_count"`
 		Authorized int    `json:"authorized_sta_count"`
 	} `json:"status"`
-	AP string `json:"-"` // radio name, filled by the page
+	Band string `json:"-"` // band of its radio, filled by the page
 }
 
 var wifiEncryptions = []wifiOption{
@@ -316,7 +332,7 @@ func (b wifiBSS) EncOptions() []wifiOption {
 func (b wifiBSS) StateLabel() string {
 	labels := map[string]string{
 		"phy_stopped": "radio arrêtée", "no_param": "non configuré", "bad_param": "configuration invalide", "disabled": "désactivé",
-		"temp_disabled": "coupé temporairement", "starting": "démarrage", "active": "actif", "failed": "en échec",
+		"temp_disabled": "coupé temporairement", "starting": "démarrage", "active": "activé", "failed": "en échec",
 	}
 	if l, ok := labels[b.Status.State]; ok {
 		return l
@@ -325,6 +341,9 @@ func (b wifiBSS) StateLabel() string {
 }
 
 func (b wifiBSS) Active() bool { return b.Status.State == "active" }
+
+// Badge is the badge modifier of the network state.
+func (b wifiBSS) Badge() string { return wifiBadge(b.Status.State, "active") }
 
 // KeyHidden is true when the box masks the key (not enough rights).
 func (b wifiBSS) KeyHidden() bool { return b.Config.Key == "" || strings.Trim(b.Config.Key, "*") == "" }
@@ -400,13 +419,13 @@ func (s *Server) wifi(w http.ResponseWriter, r *http.Request) {
 	var diag wifiDiag
 	s.soft(ctx, "wifi/diag", &diag)
 
-	names := map[int]string{}
+	bands := map[int]string{}
 	stations := map[int]int{}
 	for _, a := range aps {
-		names[a.ID] = a.Name
+		bands[a.ID] = a.Config.Band
 	}
 	for i := range bsss {
-		bsss[i].AP = names[bsss[i].PhyID]
+		bsss[i].Band = bands[bsss[i].PhyID]
 		stations[bsss[i].PhyID] += bsss[i].Status.Stations
 	}
 	sort.SliceStable(bsss, func(i, j int) bool { return bsss[i].PhyID < bsss[j].PhyID })
@@ -556,4 +575,14 @@ func (s *Server) wifiReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.change(w, r, http.MethodPost, "wifi/config/reset/", nil, "Wi-Fi remis par défaut.", "/wifi")
+}
+
+// Label names a radio: its band, plus the box's own name when a band has
+// several radios (a Pop can report "5G" and "5G1", both on 5 GHz).
+func (a wifiAP) Label() string {
+	b := band(a.Config.Band)
+	if a.Name == "" || strings.EqualFold(strings.ReplaceAll(a.Name, ".", ""), strings.ReplaceAll(a.Config.Band, ".", "")) {
+		return b
+	}
+	return b + " (" + a.Name + ")"
 }

@@ -31,7 +31,7 @@
 <div class="card table-wrap section">
 {{if .Contacts}}
 <table class="stack-sm">
-  <thead><tr><th>Nom</th><th>Numéros</th><th>E-mails</th><th><span class="sr-only">Actions</span></th></tr></thead>
+  <thead><tr><th scope="col">Nom</th><th scope="col">Numéros</th><th scope="col">E-mails</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
   <tbody>
   {{range .Contacts}}
   <tr>
@@ -40,7 +40,7 @@
     <td data-label="E-mails">{{range .Emails}}<div>{{.Email}}</div>{{end}}</td>
     <td>
       <details class="inline">
-        <summary class="ghost-btn">Modifier</summary>
+        <summary class="ghost-btn">Modifier<span class="sr-only"> {{.Name}}</span></summary>
         <div class="stack">
           <form method="post" action="/contacts/{{.ID}}/edit" class="stack">
             <div class="row">
@@ -48,7 +48,7 @@
               <label class="grow">Nom<input name="last_name" value="{{.LastName}}" maxlength="64"></label>
               <label class="grow">Société<input name="company" value="{{.Company}}" maxlength="64"></label>
             </div>
-            <label>Nom affiché<input name="display_name" value="{{.DisplayName}}" maxlength="64"></label>
+            <label>Nom affiché<input name="display_name" value="{{.DisplayName}}" maxlength="64"><span class="hint">Laisse vide pour « Prénom Nom ».</span></label>
             <label>Notes<textarea name="notes" rows="2" maxlength="500">{{.Notes}}</textarea></label>
             <button class="small">Enregistrer</button>
           </form>
@@ -57,7 +57,10 @@
           {{$id := .ID}}
           <ul class="tags">
           {{range .Numbers}}<li class="mono">{{.Number}} ({{.Type}})
-            <form method="post" action="/contacts/{{$id}}/numbers/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+            <details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.Number}}</span></summary>
+              <form method="post" action="/contacts/{{$id}}/numbers/{{.ID}}/delete" class="stack">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce numéro sera retiré définitivement.</label>
+                <button class="danger small">Retirer définitivement</button></form></details></li>{{end}}
           </ul>
           <form method="post" action="/contacts/{{$id}}/numbers/add" class="row">
             <label>Type<select name="type">{{range $.NumberTypes}}<option>{{.}}</option>{{end}}</select></label>
@@ -68,7 +71,10 @@
           <h3>E-mails</h3>
           <ul class="tags">
           {{range .Emails}}<li>{{.Email}} ({{.Type}})
-            <form method="post" action="/contacts/{{$id}}/emails/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+            <details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.Email}}</span></summary>
+              <form method="post" action="/contacts/{{$id}}/emails/{{.ID}}/delete" class="stack">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet e-mail sera retiré définitivement.</label>
+                <button class="danger small">Retirer définitivement</button></form></details></li>{{end}}
           </ul>
           <form method="post" action="/contacts/{{$id}}/emails/add" class="row">
             <label>Type<select name="type">{{range $.HomeTypes}}<option>{{.}}</option>{{end}}</select></label>
@@ -79,7 +85,10 @@
           <h3>Adresses</h3>
           <ul class="tags">
           {{range .Addresses}}<li>{{.Line}} ({{.Type}})
-            <form method="post" action="/contacts/{{$id}}/addresses/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+            <details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.Line}}</span></summary>
+              <form method="post" action="/contacts/{{$id}}/addresses/{{.ID}}/delete" class="stack">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette adresse sera retiré définitivement.</label>
+                <button class="danger small">Retirer définitivement</button></form></details></li>{{end}}
           </ul>
           <form method="post" action="/contacts/{{$id}}/addresses/add" class="stack">
             <div class="row">
@@ -99,7 +108,10 @@
           <h3>Sites web</h3>
           <ul class="tags">
           {{range .URLs}}<li>{{.URL}} ({{.Type}})
-            <form method="post" action="/contacts/{{$id}}/urls/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+            <details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.URL}}</span></summary>
+              <form method="post" action="/contacts/{{$id}}/urls/{{.ID}}/delete" class="stack">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce site sera retiré définitivement.</label>
+                <button class="danger small">Retirer définitivement</button></form></details></li>{{end}}
           </ul>
           <form method="post" action="/contacts/{{$id}}/urls/add" class="row">
             <label>Type<select name="type">{{range $.URLTypes}}<option>{{.}}</option>{{end}}</select></label>
@@ -110,7 +122,7 @@
           <h3>Suppression</h3>
           <form method="post" action="/contacts/{{$id}}/delete" class="stack">
             <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce contact et tout ce qui lui est rattaché seront effacés définitivement.</label>
-            <button class="small danger">Supprimer le contact</button>
+            <button class="small danger">Supprimer définitivement</button>
           </form>
         </div>
       </details>

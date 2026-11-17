@@ -26,10 +26,27 @@ type Op struct {
 	Params []Param
 	// Body, when true, sends the "body" argument as the JSON request body.
 	Body     bool
-	BodyHelp string // describes the body object's fields
-	// Dangerous operations can cut the network or lose data: they run only
-	// with "confirm": true in the arguments.
+	BodyHelp string // describes the body's fields
+	// BodyArray marks a body that is a JSON array, not an object.
+	BodyArray bool
+	// Form sends the body object as application/x-www-form-urlencoded, for
+	// the few endpoints that want it (downloads/add).
+	Form bool
+	// Read marks a POST that only reads (rrd/, batched file info): it is
+	// announced read-only and allowed for read-only API tokens.
+	Read bool
+	// Secret marks a read that returns keys or passwords (Wi-Fi keys, VPN
+	// configurations): read-only API tokens may not call it.
+	Secret bool
+	// Dangerous operations can cut the network or access, lose data, expose
+	// the box or its secrets, or make it reach an arbitrary address: they run
+	// only with "confirm": true in the arguments.
 	Dangerous bool
+}
+
+// ReadOnly reports whether op changes nothing on the box.
+func (op Op) ReadOnly() bool {
+	return (op.Method == http.MethodGet || op.Read) && !op.Dangerous
 }
 
 // Param is a path or query parameter.
@@ -73,6 +90,10 @@ func Register(list ...Op) {
 		if op.Method == "" {
 			op.Method = http.MethodGet
 		}
+		// Deleting loses data: every DELETE asks for the confirmation.
+		if op.Method == http.MethodDelete {
+			op.Dangerous = true
+		}
 		all[op.Name] = op
 	}
 }
@@ -99,11 +120,11 @@ func Get(name string) (Op, bool) {
 
 // ErrConfirm is returned when a dangerous operation is called without
 // "confirm": true.
-var ErrConfirm = errors.New(`this action can cut the network or lose data: ask the user, then call again with "confirm": true`)
+var ErrConfirm = errors.New(`this action can cut the network or access, lose data, or expose the box or its secrets: explain it to the user, then call again with "confirm": true once they agreed`)
 
 // Call runs op with the given arguments and returns the box's result.
 func Call(ctx context.Context, box Box, op Op, args map[string]any) (json.RawMessage, error) {
-	if op.Dangerous {
+	if op.Dangerous || op.Secret { // revealing a secret is confirmed too
 		if c, _ := args["confirm"].(bool); !c {
 			return nil, ErrConfirm
 		}
@@ -149,6 +170,21 @@ func Call(ctx context.Context, box Box, op Op, args map[string]any) (json.RawMes
 			return nil, errors.New(`missing argument "body"`)
 		}
 		body = b
+		if op.Form {
+			obj, ok := b.(map[string]any)
+			if !ok {
+				return nil, errors.New(`argument "body" must be an object`)
+			}
+			form := url.Values{}
+			for k, v := range obj {
+				sv, err := scalar(v)
+				if err != nil {
+					return nil, fmt.Errorf("body field %q: %w", k, err)
+				}
+				form.Set(k, sv)
+			}
+			body = form
+		}
 	}
 	var out json.RawMessage
 	if err := box.Do(ctx, op.Method, path, body, &out); err != nil {
@@ -192,11 +228,15 @@ func (op Op) Schema() map[string]any {
 		}
 	}
 	if op.Body {
-		props["body"] = map[string]any{"type": "object", "description": op.BodyHelp}
+		t := "object"
+		if op.BodyArray {
+			t = "array"
+		}
+		props["body"] = map[string]any{"type": t, "description": op.BodyHelp}
 		required = append(required, "body")
 	}
-	if op.Dangerous {
-		props["confirm"] = map[string]any{"type": "boolean", "description": "Must be true, after the user agreed: this action can cut the network or lose data."}
+	if op.Dangerous || op.Secret {
+		props["confirm"] = map[string]any{"type": "boolean", "description": "Must be true, and only after the user agreed: this action can cut the network or access, lose data, or expose the box or its secrets."}
 		required = append(required, "confirm")
 	}
 	s := map[string]any{"type": "object", "properties": props}

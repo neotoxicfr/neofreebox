@@ -13,10 +13,12 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/neotoxicfr/neofreebox/internal/demo"
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
 	"github.com/neotoxicfr/neofreebox/internal/server"
 )
@@ -40,6 +42,10 @@ Environment:
   NEOFREEBOX_DATA_DIR        where the account is kept (default ./data)
   NEOFREEBOX_BOX_URL         box URL (default ` + fbx.DefaultURL + `)
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
+  NEOFREEBOX_READ_ONLY       true to refuse every write to the box (demos, audits)
+  NEOFREEBOX_DEMO            true to run on a built-in fake box with fictional data: no token,
+                             no box needed; sign in as demo / demo-neofreebox (data in a temporary
+                             directory, deleted on exit: never NEOFREEBOX_DATA_DIR)
 `
 
 func main() {
@@ -149,18 +155,52 @@ func client() (*fbx.Client, error) {
 
 func serve(ctx context.Context) error {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	c, err := client()
+	demoMode, err := envBool("NEOFREEBOX_DEMO")
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
+	readOnlyMode, err := envBool("NEOFREEBOX_READ_ONLY")
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+	var c *fbx.Client
+	var box server.Box
+	if demoMode {
+		box = demo.New()
+		log.Warn("demo mode: fictional data, no box is contacted", "user", server.DemoUser, "password", server.DemoPassword)
+	} else {
+		if c, err = client(); err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		box = c
+	}
 	dir := envOr("NEOFREEBOX_DATA_DIR", "./data")
+	if demoMode {
+		// The demo account has a public password: it must never land in a
+		// data directory that a real instance could reuse.
+		tmp, err := os.MkdirTemp("", "neofreebox-demo-")
+		if err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		defer func() { _ = os.RemoveAll(tmp) }()
+		dir = tmp
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
 	server.Version = version
-	s, err := server.New(c, dir, log)
+	if readOnlyMode && c != nil {
+		box = readOnly{c}
+		log.Warn("read-only mode: no write is sent to the box")
+	}
+	s, err := server.New(box, dir, log)
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
+	}
+	if demoMode {
+		if err := s.EnableDemo(); err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
 	}
 	srv := &http.Server{
 		Addr:              envOr("NEOFREEBOX_ADDR", ":8080"),
@@ -169,17 +209,22 @@ func serve(ctx context.Context) error {
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(sctx)
-		_ = c.Logout(sctx)
+		_ = srv.Shutdown(sctx) // waits for the requests in flight
+		if c != nil {
+			_ = c.Logout(sctx)
+		}
 	}()
 	log.Info("listening", "addr", srv.Addr, "version", version)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		return err
+		return err // failed to listen: no shutdown to wait for
 	}
+	<-stopped
 	return nil
 }
 
@@ -224,6 +269,38 @@ func healthcheck(ctx context.Context) error {
 		return fmt.Errorf("healthz: %s", resp.Status)
 	}
 	return nil
+}
+
+// envBool reads a boolean variable: unset is false, anything that is not a
+// boolean stops the start-up rather than silently meaning false.
+func envBool(name string) (bool, error) {
+	v := strings.TrimSpace(os.Getenv(name))
+	if v == "" {
+		return false, nil
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("%s=%q is not a boolean (true or false)", name, v)
+	}
+	return b, nil
+}
+
+// readOnly lets reads through and refuses every write, for demos, tests and
+// audits against a real box. rrd/ is read with a POST, so it passes.
+type readOnly struct{ *fbx.Client }
+
+// Get goes through the same check: vpn/download_config is a GET that writes.
+func (b readOnly) Get(ctx context.Context, path string, out any) error {
+	return b.Do(ctx, http.MethodGet, path, nil, out)
+}
+
+func (b readOnly) Do(ctx context.Context, method, path string, in, out any) error {
+	// vpn/download_config is a GET that regenerates an OpenVPN user's file.
+	read := method == http.MethodGet && !strings.HasPrefix(path, "vpn/download_config")
+	if read || (method == http.MethodPost && strings.HasPrefix(path, "rrd/")) {
+		return b.Client.Do(ctx, method, path, in, out)
+	}
+	return &fbx.Error{Status: http.StatusForbidden, Code: "read_only", Msg: "mode lecture seule : rien n'est envoyé à la box"}
 }
 
 func envOr(key, def string) string {

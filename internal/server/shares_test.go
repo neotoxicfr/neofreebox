@@ -108,7 +108,7 @@ func TestSharesWrites(t *testing.T) {
 		{"/shares/samba/smb", url.Values{"confirm": {"1"}}, `PUT netshare/samba/ {"smbv2_enabled":false}`},
 		{"/shares/afp", url.Values{"enabled": {"1"}, "server_type": {"macmini"}},
 			`PUT netshare/afp/ {"enabled":true,"guest_allow":false,"server_type":"macmini"}`},
-		{"/shares/ftp", url.Values{"enabled": {"1"}}, `PUT ftp/config/ {"enabled":true}`},
+		{"/shares/ftp", url.Values{"enabled": {"1"}, "confirm": {"1"}}, `PUT ftp/config/ {"enabled":true}`},
 		{"/shares/ftp/exposure", url.Values{"confirm": {"1"}, "remote": {"1"}, "anonymous": {"1"}, "anonymous_write": {"1"}, "port_ctrl": {"2121"}},
 			`PUT ftp/config/ {"allow_anonymous":true,"allow_anonymous_write":true,"allow_remote_access":true,"port_ctrl":2121}`},
 		{"/shares/tftp", url.Values{"enabled": {"1"}, "root": {"/Freebox/tftp"}, "confirm": {"1"}}, `PUT tftp/config/ {"enabled":true,"root":"L0ZyZWVib3gvdGZ0cA=="}`},
@@ -135,6 +135,7 @@ func TestSharesRefusals(t *testing.T) {
 		path string
 		form url.Values
 	}{
+		{"/shares/ftp", url.Values{"enabled": {"1"}}},                                  // enabling FTP without confirmation
 		{"/shares/samba/smb", url.Values{}},                                            // SMBv1 without confirmation
 		{"/shares/ftp/exposure", url.Values{"remote": {"1"}}},                          // exposure without confirmation
 		{"/shares/ftp/exposure", url.Values{"confirm": {"1"}, "port_ctrl": {"70000"}}}, // bad port

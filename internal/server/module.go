@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
 	"io"
 	"mime"
@@ -95,7 +96,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, slug string, data 
 	status := http.StatusOK
 	if err != nil {
 		s.log.Error("page", "page", slug, "err", err)
-		data["Error"] = "La box a refusé ou n'a pas répondu : " + err.Error()
+		data["Error"] = humanError(err)
 		status = http.StatusBadGateway
 	}
 	data["Flash"] = takeFlash(w, r)
@@ -109,7 +110,7 @@ func (s *Server) change(w http.ResponseWriter, r *http.Request, method, path str
 	defer cancel()
 	if err := s.box.Do(ctx, method, path, body, nil); err != nil {
 		s.log.Error("change", "method", method, "path", fbx.Redact(path), "err", err)
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 	} else {
 		s.log.Info("change", "method", method, "path", fbx.Redact(path))
 		setFlash(w, "ok:"+done)
@@ -117,9 +118,25 @@ func (s *Server) change(w http.ResponseWriter, r *http.Request, method, path str
 	http.Redirect(w, r, back, http.StatusSeeOther)
 }
 
+// humanError turns an error into a sentence for the page: the box's own
+// French message when it gave one, without codes or Go prefixes.
+func humanError(err error) string {
+	var fe *fbx.Error
+	switch {
+	case fbx.IsCode(err, "read_only"):
+		return "Mode lecture seule : la modification n'a pas été envoyée à la box."
+	case fbx.IsCode(err, "insufficient_rights"):
+		return "La box refuse : l'application n'a pas ce droit (Freebox OS → Gestion des accès → Applications)."
+	case errors.As(err, &fe) && fe.Msg != "":
+		return "La box refuse : " + fe.Msg + "."
+	case errors.Is(err, context.DeadlineExceeded):
+		return "La box n'a pas répondu à temps."
+	}
+	return "La box n'a pas pu être jointe."
+}
+
 // confirmed reports whether a dangerous form was confirmed (a required
 // "confirm" checkbox). If not, it redirects back with an error.
-//
 func confirmed(w http.ResponseWriter, r *http.Request, back string) bool {
 	if r.PostFormValue("confirm") == "1" {
 		return true
@@ -189,13 +206,13 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, path, filename s
 	resp, err := rb.Raw(r.Context(), path)
 	if err != nil {
 		s.log.Error("stream", "path", fbx.Redact(path), "err", err)
-		setFlash(w, "err:"+err.Error())
+		setFlash(w, "err:"+humanError(err))
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
 	defer resp.Body.Close()
 	h := w.Header()
-	ct := resp.Header.Get("Content-Type")
+	ct := strings.ToLower(resp.Header.Get("Content-Type"))
 	if ct == "" || strings.Contains(ct, "html") || strings.Contains(ct, "xml") || strings.Contains(ct, "javascript") {
 		ct = "application/octet-stream" // never let the box's bytes run as a page
 	}
@@ -210,5 +227,7 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, path, filename s
 		disp = "attachment"
 	}
 	h.Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": filename}))
-	_, _ = io.Copy(w, resp.Body)
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		s.log.Warn("stream interrupted", "path", fbx.Redact(path), "err", err)
+	}
 }

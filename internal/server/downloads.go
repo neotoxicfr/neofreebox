@@ -14,11 +14,10 @@ import (
 // Downloads: the box's download manager (HTTP, FTP, magnet, BitTorrent,
 // newsgroups): queue, per-task details, RSS feeds and settings.
 //
-// Known limits of the API client, which sends JSON only and refuses an
-// encoded "/" inside a path segment:
-//   - the box documents "downloads/add" as form-urlencoded / multipart, so
-//     adding by URL sends JSON (unverified against a real box) and .torrent
-//     file upload is not offered;
+// Known limits of the API client, which refuses an encoded "/" inside a
+// path segment:
+//   - "downloads/add" goes form-urlencoded (the op's Form flag), as the box
+//     documents; .torrent file upload is not offered;
 //   - removing or updating a tracker (the announce URL goes in the path) is
 //     not possible.
 
@@ -64,8 +63,8 @@ func init() {
 		ops.Op{Name: "downloads_erase", Description: "Remove a task AND erase its downloaded files.",
 			Method: http.MethodDelete, Path: "downloads/{id}/erase", Params: []ops.Param{id}, Dangerous: true},
 		ops.Op{Name: "downloads_log", Description: "Get the log of a task (text).", Path: "downloads/{id}/log", Params: []ops.Param{id}},
-		ops.Op{Name: "downloads_add", Description: "Add a download by URL (http://, ftp://, magnet:). The box documents this call as form-urlencoded, not JSON: it may refuse a JSON body. Returns the new task id (or a list of ids with download_url_list).",
-			Method: http.MethodPost, Path: "downloads/add", Body: true,
+		ops.Op{Name: "downloads_add", Description: "Add a download by URL (http://, ftp://, magnet:). The box fetches the address itself. Returns the new task id (or a list of ids with download_url_list).",
+			Method: http.MethodPost, Path: "downloads/add", Body: true, Form: true, Dangerous: true,
 			BodyHelp: `{"download_url": "magnet:?xt=urn:btih:...", "download_dir": "<base64 of /Disque dur/Téléchargements/>", "recursive": false, "username": "", "password": ""}; several URLs: "download_url_list": "url1\nurl2"`},
 		ops.Op{Name: "downloads_stats", Description: "Downloader summary: task counts per status, rx_rate/tx_rate (bytes/s), throttling_mode, nb_peer, nb_rss, nb_rss_items_unread, conn_ready, dht_stats, nzb_config_status.",
 			Path: "downloads/stats"},
@@ -78,7 +77,7 @@ func init() {
 		ops.Op{Name: "downloads_trackers_list", Description: "List the trackers of a BitTorrent task: announce, status, seeders, leechers, reannounce_in, is_enabled, is_backup.",
 			Path: "downloads/{id}/trackers", Params: []ops.Param{id}},
 		ops.Op{Name: "downloads_tracker_add", Description: "Add a tracker to a BitTorrent task. (Removing or editing a tracker is not available: its announce URL cannot go in the path through this client.)",
-			Method: http.MethodPost, Path: "downloads/{id}/trackers", Params: []ops.Param{id}, Body: true,
+			Method: http.MethodPost, Path: "downloads/{id}/trackers", Params: []ops.Param{id}, Body: true, Dangerous: true,
 			BodyHelp: `{"announce": "udp://tracker.example.org:80"}`},
 		ops.Op{Name: "downloads_peers_list", Description: "List the peers of a BitTorrent task: host, port, state, origin, protocol, client, country_code, progress, rx/tx and rates.",
 			Path: "downloads/{id}/peers", Params: []ops.Param{id}},
@@ -96,7 +95,7 @@ func init() {
 			Path: "downloads/feeds/"},
 		ops.Op{Name: "downloads_feed_get", Description: "Get one RSS feed.", Path: "downloads/feeds/{feed_id}", Params: []ops.Param{fid}},
 		ops.Op{Name: "downloads_feed_add", Description: "Subscribe to an RSS feed.", Method: http.MethodPost, Path: "downloads/feeds/",
-			Body: true, BodyHelp: `{"url": "https://example.org/rss.xml"}`},
+			Body: true, Dangerous: true, BodyHelp: `{"url": "https://example.org/rss.xml"}`},
 		ops.Op{Name: "downloads_feed_update", Description: "Turn automatic download of new items on or off for a feed.",
 			Method: http.MethodPut, Path: "downloads/feeds/{feed_id}", Params: []ops.Param{fid}, Body: true, BodyHelp: `{"auto_download": true}`},
 		ops.Op{Name: "downloads_feed_delete", Description: "Delete an RSS feed and its items (the download tasks are kept).",
@@ -579,6 +578,9 @@ func (s *Server) downloadDelete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !confirmed(w, r, "/downloads") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "downloads/"+id, nil, "Téléchargement retiré de la liste (fichiers conservés).", "/downloads")
 }
 
@@ -691,7 +693,7 @@ func (s *Server) feedAuto(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) feedDelete(w http.ResponseWriter, r *http.Request) {
-	if fid, ok := feedID(w, r); ok {
+	if fid, ok := feedID(w, r); ok && confirmed(w, r, "/downloads") {
 		s.change(w, r, http.MethodDelete, "downloads/feeds/"+fid, nil, "Flux supprimé.", "/downloads")
 	}
 }

@@ -11,11 +11,11 @@
 <div class="card table-wrap section">
 {{if .Hosts}}
 <table class="stack-sm">
-  <thead><tr><th>Nom</th><th>IPv4</th><th>MAC</th><th>Lien</th><th>Fabricant</th><th><span class="sr-only">Actions</span></th></tr></thead>
+  <thead><tr><th scope="col">Nom</th><th scope="col">IPv4</th><th scope="col">MAC</th><th scope="col">Lien</th><th scope="col">Fabricant</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
   <tbody>
   {{range .Hosts}}
   <tr>
-    <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{if .Active}}actif{{else}}absent{{end}}</span> {{or .PrimaryName .VendorName "Sans nom"}}</td>
+    <td><span class="badge{{if .Active}} on{{end}}">{{if .Active}}connecté{{else}}déconnecté{{end}}</span> {{or .PrimaryName .VendorName "Sans nom"}}</td>
     <td class="mono" data-label="IPv4">{{.IPv4}}</td>
     <td class="mono" data-label="MAC">{{.L2Ident.ID}}</td>
     <td data-label="Lien">{{.Link}}</td>
@@ -23,19 +23,20 @@
     <td>
       <div class="actions">
         <details class="inline">
-          <summary class="ghost-btn">Renommer</summary>
+          <summary class="ghost-btn">Renommer<span class="sr-only"> {{or .PrimaryName .VendorName "cet appareil"}}</span></summary>
           <form method="post" action="/devices/{{.ID}}/rename" class="row">
             <label class="grow">Nouveau nom<input name="name" value="{{.PrimaryName}}" required maxlength="64"></label>
             <button class="small">Enregistrer</button>
           </form>
         </details>
-        {{if not .Active}}<form method="post" action="/devices/{{.ID}}/wake"><button class="ghost small">Réveiller</button></form>{{end}}
+        {{if not .Active}}<form method="post" action="/devices/{{.ID}}/wake"><button class="ghost small">Réveiller<span class="sr-only"> {{or .PrimaryName .VendorName "cet appareil"}}</span></button></form>{{end}}
       </div>
     </td>
   </tr>
   {{end}}
   </tbody>
 </table>
+{{if .Capped}}<p><a href="/devices?full=1{{if .All}}&amp;all=1{{end}}{{if .Q}}&amp;q={{.Q}}{{end}}">Tout afficher ({{.Matched}})</a></p>{{end}}
 {{else}}<p class="empty">Aucun appareil ne correspond.</p>{{end}}
 </div>
 {{end}}

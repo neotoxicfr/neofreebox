@@ -39,20 +39,20 @@ func init() {
 	ops.Register(
 		ops.Op{Name: "vpn_servers_list", Description: "List the VPN servers (pptp, openvpn_routed, openvpn_bridge, ipsec, wireguard): name, type, state (stopped/starting/started/stopping/error), connection_count.",
 			Path: "vpn/"},
-		ops.Op{Name: "vpn_server_config_get", Description: "Get a VPN server's configuration: enabled, port (+ min_port/max_port), IP range, and conf_wireguard (mtu) / conf_openvpn (cipher, use_tcp, disable_fragment) / conf_pptp (mppe, allowed_auth).",
+		ops.Op{Name: "vpn_server_config_get", Secret: true, Description: "Get a VPN server's configuration: enabled, port (+ min_port/max_port), IP range, and conf_wireguard (mtu) / conf_openvpn (cipher, use_tcp, disable_fragment) / conf_pptp (mppe, allowed_auth).",
 			Path: "vpn/{vpn_id}/config/", Params: []ops.Param{{Name: "vpn_id", Description: `Server name, e.g. "wireguard" or "openvpn_routed"`}}},
 		ops.Op{Name: "vpn_server_config_update", Description: "Update a VPN server: start or stop it (enabled), change its port or its protocol settings. Stopping the server or changing its port disconnects every VPN client.", Method: http.MethodPut,
 			Path: "vpn/{vpn_id}/config/", Params: []ops.Param{{Name: "vpn_id", Description: `Server name, e.g. "wireguard"`}},
 			Body: true, BodyHelp: `{"enabled": true, "port": 51820, "conf_wireguard": {"mtu": 1360}}`, Dangerous: true},
-		ops.Op{Name: "vpn_users_list", Description: "List the VPN users, common to all servers: login, type (standard or wireguard), ip_reservation, password_set, conf_wireguard (keepalive, psk).",
+		ops.Op{Name: "vpn_users_list", Secret: true, Description: "List the VPN users, common to all servers: login, type (standard or wireguard), ip_reservation, password_set, conf_wireguard (keepalive, psk).",
 			Path: "vpn/user/"},
-		ops.Op{Name: "vpn_user_get", Description: "Get one VPN user by login.",
+		ops.Op{Name: "vpn_user_get", Secret: true, Description: "Get one VPN user by login.",
 			Path: "vpn/user/{login}", Params: []ops.Param{{Name: "login", Description: "VPN user login"}}},
 		ops.Op{Name: "vpn_user_add", Description: "Create a VPN user. A wireguard user needs an ip_reservation inside the VPN pool; a standard user (OpenVPN, PPTP, IPsec) needs a password of 8 to 32 characters.", Method: http.MethodPost,
-			Path: "vpn/user/", Body: true, BodyHelp: userBody},
+			Path: "vpn/user/", Body: true, BodyHelp: userBody, Dangerous: true},
 		ops.Op{Name: "vpn_user_update", Description: "Update a VPN user: password, ip_reservation or conf_wireguard.", Method: http.MethodPut,
 			Path: "vpn/user/{login}", Params: []ops.Param{{Name: "login", Description: "VPN user login"}},
-			Body: true, BodyHelp: `{"ip_reservation": "10.8.0.71", "conf_wireguard": {"keepalive": 25}}`},
+			Body: true, BodyHelp: `{"ip_reservation": "10.8.0.71", "conf_wireguard": {"keepalive": 25}}`, Dangerous: true},
 		ops.Op{Name: "vpn_user_delete", Description: "Delete a VPN user; their devices can no longer connect and any configuration file given to them stops working.", Method: http.MethodDelete,
 			Path: "vpn/user/{login}", Params: []ops.Param{{Name: "login", Description: "VPN user login"}}, Dangerous: true},
 		ops.Op{Name: "vpn_ip_pool_get", Description: "Get the VPN IP pool: ip_start, ip_end and the reservations (login, ip).",
@@ -61,10 +61,10 @@ func init() {
 			Path: "vpn/connection/"},
 		ops.Op{Name: "vpn_connection_close", Description: "Close one active VPN connection by id (the client may reconnect).", Method: http.MethodDelete,
 			Path: "vpn/connection/{id}", Params: []ops.Param{{Name: "id", Description: `Connection id, e.g. "wireguard-60"`}}, Dangerous: true},
-		ops.Op{Name: "vpn_config_download", Description: "Download a user's client configuration file for an OpenVPN or WireGuard server; with fmt=json the file comes back as a string. SECRET: contains the user's private key. Each OpenVPN download invalidates the previous file of that user. Needs the settings permission.",
+		ops.Op{Name: "vpn_config_download", Secret: true, Description: "Download a user's client configuration file for an OpenVPN or WireGuard server; with fmt=json the file comes back as a string. SECRET: contains the user's private key. Each OpenVPN download invalidates the previous file of that user. Needs the settings permission.",
 			Path: "vpn/download_config/{server_name}/{login}/{fmt}", Params: []ops.Param{
 				{Name: "server_name", Description: `Server name, e.g. "wireguard"`}, {Name: "login", Description: "VPN user login"},
-				{Name: "fmt", Description: `Use "json"`}}},
+				{Name: "fmt", Description: `Use "json"`}}, Dangerous: true},
 	)
 }
 
@@ -105,11 +105,11 @@ func (v vpnServer) StateLabel() string {
 	case "stopped":
 		return "arrêté"
 	case "starting":
-		return "démarrage"
+		return "démarrage en cours"
 	case "started":
-		return "actif"
+		return "en marche"
 	case "stopping":
-		return "arrêt"
+		return "arrêt en cours"
 	case "error":
 		return "erreur"
 	}
@@ -219,6 +219,9 @@ func (s *Server) vpnSetEnabled(w http.ResponseWriter, r *http.Request, on bool, 
 }
 
 func (s *Server) vpnStart(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/vpn") {
+		return
+	}
 	s.vpnSetEnabled(w, r, true, "Serveur démarré.")
 }
 
@@ -246,6 +249,9 @@ func (s *Server) vpnPort(w http.ResponseWriter, r *http.Request) {
 // vpnSettings saves the protocol settings of one server; the fields sent
 // depend on the server type (given in the form).
 func (s *Server) vpnSettings(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/vpn") {
+		return
+	}
 	body := map[string]any{}
 	switch formStr(r, "type") {
 	case "wireguard":
@@ -277,6 +283,9 @@ func vpnBad(w http.ResponseWriter, r *http.Request, msg string) {
 }
 
 func (s *Server) vpnUserAdd(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/vpn") {
+		return
+	}
 	login, typ := formStr(r, "login"), formStr(r, "type")
 	if login == "" {
 		vpnBad(w, r, "Le nom ne peut pas être vide.")
@@ -305,6 +314,9 @@ func (s *Server) vpnUserAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) vpnUserUpdate(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/vpn") {
+		return
+	}
 	body := map[string]any{}
 	if ip := formStr(r, "ip_reservation"); ip != "" {
 		body["ip_reservation"] = ip
@@ -368,7 +380,7 @@ func (s *Server) vpnDownload(w http.ResponseWriter, r *http.Request) {
 	}
 	text, err := s.clientConfig(r, server, login)
 	if err != nil {
-		s.log.Error("vpn download", "server", server, "login", login, "err", err)
+		s.log.Error("vpn download", "server", server, "err", err)
 		vpnBad(w, r, err.Error())
 		return
 	}
@@ -393,13 +405,13 @@ func (s *Server) vpnQR(w http.ResponseWriter, r *http.Request) {
 	}
 	text, err := s.clientConfig(r, server, login)
 	if err != nil {
-		s.log.Error("vpn qr", "server", server, "login", login, "err", err)
+		s.log.Error("vpn qr", "server", server, "err", err)
 		http.Error(w, "La box n'a pas fourni la configuration.", http.StatusBadGateway)
 		return
 	}
 	code, err := qr.Encode(text, qr.M)
 	if err != nil {
-		s.log.Error("vpn qr", "server", server, "login", login, "err", err)
+		s.log.Error("vpn qr", "server", server, "err", err)
 		http.Error(w, "Configuration trop longue pour un QR code.", http.StatusUnprocessableEntity)
 		return
 	}

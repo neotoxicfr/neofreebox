@@ -74,10 +74,10 @@ func TestDHCPWrites(t *testing.T) {
 	box, _, _, send := dhcpSetup(t)
 	send("/dhcp/static", url.Values{"mac": {"00:11:22:33:44:77"}, "ip": {"192.168.1.30"}, "comment": {"nas"}})
 	send("/dhcp/static/00:11:22:33:44:55/update", url.Values{"ip": {"192.168.1.21"}, "comment": {"x"}})
-	send("/dhcp/static/00:11:22:33:44:55/delete", nil)
+	send("/dhcp/static/00:11:22:33:44:55/delete", url.Values{"confirm": {"1"}})
 	send("/dhcp/enabled", url.Values{"enabled": {"1"}})
 	send("/dhcp/v6/dns", url.Values{"use_custom_dns": {"1"}})
-	send("/dhcp/config", url.Values{"ip_range_start": {"192.168.1.10"}, "ip_range_end": {"192.168.1.20"}, "dns1": {"192.168.1.254"}, "sticky_assign": {"1"}})
+	send("/dhcp/config", url.Values{"ip_range_start": {"192.168.1.10"}, "ip_range_end": {"192.168.1.20"}, "dns1": {"192.168.1.254"}, "sticky_assign": {"1"}, "confirm": {"1"}})
 	want := []string{
 		`POST dhcp/static_lease/ {"comment":"nas","ip":"192.168.1.30","mac":"00:11:22:33:44:77"}`,
 		`PUT dhcp/static_lease/00:11:22:33:44:55 {"comment":"x","ip":"192.168.1.21"}`,
@@ -104,6 +104,15 @@ func TestDHCPInvalidInputSendsNothing(t *testing.T) {
 	send("/dhcp/config", url.Values{"ip_range_start": {"192.168.1.10"}, "ip_range_end": {"192.168.1.20"}, "dns2": {"bad"}})
 	if len(box.writes) != 0 {
 		t.Fatalf("unexpected writes: %q", box.writes)
+	}
+}
+
+func TestDHCPConfigAndDeleteNeedConfirm(t *testing.T) {
+	box, _, _, send := dhcpSetup(t)
+	send("/dhcp/config", url.Values{"ip_range_start": {"192.168.1.10"}, "ip_range_end": {"192.168.1.20"}, "boot_server": {"192.0.2.5"}})
+	send("/dhcp/static/00:11:22:33:44:55/delete", nil)
+	if len(box.writes) != 0 {
+		t.Fatalf("sent without confirm: %q", box.writes)
 	}
 }
 

@@ -156,6 +156,9 @@ type limiter struct {
 	failures []time.Time
 }
 
+// allow reserves an attempt: concurrent requests cannot all pass before the
+// first failure is counted. A successful attempt gives its place back with
+// succeed.
 func (l *limiter) allow() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -165,11 +168,18 @@ func (l *limiter) allow() bool {
 		i++
 	}
 	l.failures = l.failures[i:]
-	return len(l.failures) < l.max
+	if len(l.failures) >= l.max {
+		return false
+	}
+	l.failures = append(l.failures, time.Now())
+	return true
 }
 
-func (l *limiter) fail() {
+// succeed releases the attempt reserved by the last allow.
+func (l *limiter) succeed() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.failures = append(l.failures, time.Now())
+	if n := len(l.failures); n > 0 {
+		l.failures = l.failures[:n-1]
+	}
 }

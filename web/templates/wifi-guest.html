@@ -38,6 +38,7 @@
         </label>
       </div>
       <label class="check"><input type="checkbox" name="confirm" value="1"> Accès complet : je comprends que l'invité verra les appareils de mon réseau local.</label>
+      <p class="hint">À cocher seulement avec « Réseau local + internet » : sans cette case, l'accès complet est refusé.</p>
       <button>Créer l'accès</button>
     </form>
   </section>
@@ -47,7 +48,7 @@
   <h2>Clés actives</h2>
   {{if .Keys}}
   <table class="stack-sm">
-    <thead><tr><th>Description</th><th>Accès</th><th>Reste</th><th>Appareils</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Description</th><th scope="col">Accès</th><th scope="col">Reste</th><th scope="col">Appareils</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Keys}}
     <tr>
@@ -58,14 +59,14 @@
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Clé</summary>
+            <summary class="ghost-btn">Clé<span class="sr-only"> {{or .Params.Description "sans description"}}</span></summary>
             {{if .KeyHidden}}<p class="muted">La box ne donne pas la clé à cette application.</p>{{else}}<p><code class="select">{{.Params.Key}}</code></p>{{end}}
           </details>
           <details class="inline">
-            <summary class="ghost-btn">Supprimer</summary>
+            <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la clé {{or .Params.Description "sans description"}}</span></summary>
             <form method="post" action="/wifi-guest/keys/{{.ID}}/delete" class="stack">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les invités connectés avec cette clé seront déconnectés.</label>
-              <button class="small danger">Supprimer la clé</button>
+              <button class="small danger">Supprimer définitivement</button>
             </form>
           </details>
         </div>

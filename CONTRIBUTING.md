@@ -1,48 +1,51 @@
-# Contributing
+# Contribuer
 
-## Prerequisites
+Merci de ton intérêt ! Une issue, une idée ou une pull request sont les bienvenues. En
+participant, tu acceptes le [code de conduite](CODE_OF_CONDUCT.md).
 
-- **Go 1.27+** (the version in `go.mod` is authoritative; CI installs it from there)
-- **golangci-lint v2.15+**, built with a Go version ≥ the one in `go.mod`
-- **A C toolchain** (gcc/clang), only for `go test -race`
-- **lefthook** *(optional)*: installs the git hooks in `lefthook.yml`
-- **actionlint** *(optional)*: validates workflow changes
+## Prérequis
+
+- **Go 1.27+** (la version de `go.mod` fait foi ; la CI l'installe à partir de là)
+- **golangci-lint v2.15+**, compilé avec une version de Go ≥ celle de `go.mod`
+- **Une chaîne C** (gcc/clang), uniquement pour `go test -race`
+- **lefthook** *(facultatif)* : installe les hooks git de `lefthook.yml`
+- **actionlint** *(facultatif)* : valide les modifications de workflows
 
 ```bash
-neofreebox pair -o freebox.token   # once, on the box's network
-make dev    # serves on :8080, data in ./data
+neofreebox pair -o freebox.token   # une fois, sur le réseau de la box
+make dev    # sert sur :8080, données dans ./data
 ```
 
-## Project conventions
+## Conventions du projet
 
-- **No build step for the front-end**: `html/template` and vanilla JS/CSS,
-  embedded in the binary. No npm.
-- **Desktop and mobile matter equally**: every UI change is checked at
-  1440×900 and at an iPhone viewport. Neither layout is a scaled version of
-  the other.
-- **The Freebox app token never reaches the browser**: it is read from a file
-  (`NEOFREEBOX_APP_TOKEN_FILE`), used server-side only, and never logged.
-- **Anything that can cut the network** (Wi-Fi, DHCP, bridge mode, reboot)
-  asks for confirmation before it is sent to the box.
-- **Errors**: wrap with context, `fmt.Errorf("context: %w", err)`.
-- **Config**: `NEOFREEBOX_*` environment variables, validated in `config.Load()`;
-  a bad value fails at startup. A new variable goes in `config.go`,
-  `Dockerfile` (if it has a default), `README.md` and
+- **Pas d'étape de build pour le front** : `html/template` et JS/CSS natifs, embarqués
+  dans le binaire. Pas de npm.
+- **Ordinateur et mobile comptent autant** : chaque modification d'interface est vérifiée en
+  1440×900 et sur un affichage d'iPhone. Aucune des deux mises en page n'est une version
+  réduite de l'autre.
+- **Le jeton d'application Freebox n'atteint jamais le navigateur** : il est lu dans un
+  fichier (`NEOFREEBOX_APP_TOKEN_FILE`), utilisé côté serveur uniquement, et jamais journalisé.
+- **Tout ce qui peut couper le réseau** (Wi-Fi, DHCP, mode pont, redémarrage) demande une
+  confirmation avant d'être envoyé à la box.
+- **Erreurs** : les envelopper avec du contexte, `fmt.Errorf("contexte: %w", err)`.
+- **Configuration** : variables d'environnement `NEOFREEBOX_*` ; une mauvaise valeur fait
+  échouer le démarrage. Une nouvelle variable va dans le code (`cmd/neofreebox/main.go`),
+  le `Dockerfile` (si elle a une valeur par défaut), le `README.md` et
   `deploy/compose.yml.example`.
-- **Tests**: table-driven; the Freebox OS API is faked with `httptest` from
-  real, anonymised responses (MAC addresses, IPs, names and serials replaced).
+- **Tests** : pilotés par tableaux ; l'API Freebox OS est simulée avec `httptest` à partir de
+  réponses réelles anonymisées (adresses MAC, IP, noms et numéros de série remplacés).
 
-## Workflow
+## Déroulé
 
-The default branch is `main`; day-to-day work targets **`dev`**.
+La branche par défaut est `main` ; le travail courant vise **`dev`**.
 
 ```bash
 git switch dev
-git switch -c my-change
+git switch -c ma-modification
 ```
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org), in
-English, with a body that explains the scenario when the change is not obvious:
+Les commits suivent les [Conventional Commits](https://www.conventionalcommits.org), en
+anglais, avec un corps qui explique le scénario quand la modification n'est pas évidente :
 
 ```
 feat(dhcp): static leases
@@ -51,44 +54,42 @@ chore(deps): bump actions/checkout
 chore(ci): add job timeouts
 ```
 
-Pull requests target `dev` and are **squash-merged** (the only method enabled).
-At release time, `dev` is squash-merged into `main` and the tag is pushed.
+Les pull requests visent `dev` et sont fusionnées en **squash** (seule méthode activée).
+À la publication d'une version, `dev` est fusionnée en squash dans `main` et le tag est poussé.
 
 ## CI
 
-- `ci.yml`: build, race tests, golangci-lint, govulncheck and a Trivy scan, on
-  every pull request.
-- `docker-publish.yml`: on a push to `dev` it runs `ci.yml`, then publishes
-  `:dev` (amd64). On a `v*` tag it runs `ci.yml`, publishes `X.Y.Z` and
-  `latest` (amd64, arm64, arm/v7), then creates the GitHub release. Nothing is
-  published on a red run.
+- `ci.yml` : build, tests avec détecteur de courses, golangci-lint, govulncheck et analyse
+  Trivy, sur chaque pull request.
+- `docker-publish.yml` : sur un push vers `dev`, il lance `ci.yml` puis publie `:dev`
+  (amd64). Sur un tag `v*`, il lance `ci.yml`, publie `X.Y.Z` et `latest` (amd64, arm64,
+  arm/v7), puis crée la release GitHub. Rien n'est publié si la CI est rouge.
 
-## Before pushing
+## Avant de pousser
 
 ```bash
-make check            # build, test-race, lint, vuln: what CI runs
-make test             # instead of test-race, if you have no C toolchain
+make check            # build, test-race, lint, vuln : ce que lance la CI
+make test             # à la place de test-race, sans chaîne C
 ```
 
-If you changed anything under `.github/workflows/`, run `actionlint`. Every
-`uses:` **must** be pinned to a full commit SHA — the repository enforces it,
-and an unpinned reference will simply refuse to run.
+Si tu as modifié quoi que ce soit sous `.github/workflows/`, lance `actionlint`. Chaque
+`uses:` **doit** être épinglé sur un SHA de commit complet : le dépôt l'impose, et une
+référence non épinglée refusera simplement de s'exécuter.
 
-## Releases
+## Versions
 
-Semantic versioning, judged by what is in the diff:
+Versionnage sémantique, jugé sur le contenu du diff :
 
-| Bump | When |
-| ---- | ---- |
-| patch | dependency bumps, fixes, CI-only changes |
-| minor | new features |
-| major | breaking changes to configuration or behaviour |
+| Montée | Quand |
+| ------ | ----- |
+| patch | mises à jour de dépendances, corrections, changements de CI seule |
+| mineure | nouvelles fonctions |
+| majeure | changements incompatibles de configuration ou de comportement |
 
-Git tags, release titles and release notes carry the `v` (`v1.2.3`); Docker
-image tags do not (`ghcr.io/neotoxicfr/neofreebox:1.2.3`), because
-`docker/metadata-action` strips it — a `:v1.2.3` pull command points at a tag
-that does not exist.
+Les tags git, titres de release et notes portent le `v` (`v1.2.3`) ; les tags d'image
+Docker non (`ghcr.io/neotoxicfr/neofreebox:1.2.3`), car `docker/metadata-action` le retire :
+une commande `:v1.2.3` pointe vers un tag qui n'existe pas.
 
-Release notes are written by hand and added to the release the workflow
-creates: `## <emoji> <Category>` sections and a `### Docker` block with the
-pull commands. No auto-generated content.
+Les notes de release sont écrites à la main et ajoutées à la release que crée le workflow :
+des sections par thème (ce qui change pour l'utilisateur) et un bloc `### Docker` avec les
+commandes `docker pull`. Aucun contenu autogénéré.

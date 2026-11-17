@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -24,6 +25,12 @@ type reading struct {
 	Name  string `json:"name"`
 	Value int    `json:"value"`
 }
+
+// StateLabel is the line state in French.
+func (c connection) StateLabel() string { return lineState(c.State) }
+
+// MediaLabel is the line type in French, as on the connection page.
+func (c connection) MediaLabel() string { return connStatus{Media: c.Media}.MediaLabel() }
 
 type connection struct {
 	State         string `json:"state"`
@@ -54,6 +61,32 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() error { return s.box.Get(gctx, "system/", &sys) })
 	g.Go(func() error { return s.box.Get(gctx, "connection/", &conn) })
 	g.Go(func() (err error) { perms, err = s.box.Permissions(gctx); return err })
+	// "En bref": figures from other pages. Each is optional (a missing right
+	// or a slow endpoint only drops its line) and runs beside the main calls.
+	var (
+		hosts []lanHost
+		calls []struct {
+			New bool `json:"new"`
+		}
+		wifi struct {
+			Enabled bool `json:"enabled"`
+		}
+		haveHost = false
+		haveCall = false
+		haveWifi = false
+	)
+	soft := func(ok *bool, path string, out any) {
+		g.Go(func() error {
+			// Optional figures get a short leash: a slow one must not hold the page.
+			octx, cancel := context.WithTimeout(gctx, 3*time.Second)
+			defer cancel()
+			*ok = s.box.Get(octx, path, out) == nil
+			return nil
+		})
+	}
+	soft(&haveHost, "lan/browser/pub/", &hosts)
+	soft(&haveCall, "call/log/", &calls)
+	soft(&haveWifi, "wifi/config/", &wifi)
 	data := map[string]any{"Nav": "status"}
 	if err := g.Wait(); err != nil {
 		s.log.Error("status", "err", err)
@@ -69,6 +102,33 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(granted)
 	data["System"], data["Conn"], data["Rights"] = sys, conn, granted
+	brief := map[string]any{}
+	if haveHost {
+		active := 0
+		for _, h := range hosts {
+			if h.Active {
+				active++
+			}
+		}
+		brief["HasHosts"], brief["Active"], brief["Total"] = true, active, len(hosts)
+	}
+	if haveCall {
+		unread := 0
+		for _, c := range calls {
+			if c.New {
+				unread++
+			}
+		}
+		brief["HasCalls"], brief["Unread"] = true, unread
+	}
+	if haveWifi {
+		brief["Wifi"] = wifi.Enabled
+		brief["HasWifi"] = true
+	}
+	data["Brief"] = brief
+	for i := range sys.Fans { // same names as the graphs page: "Ventilateur 1"…
+		sys.Fans[i].Name = fmt.Sprintf("Ventilateur %d", i+1)
+	}
 	data["Uptime"] = duration(time.Duration(sys.UptimeVal) * time.Second)
 	data["Down"], data["Up"] = bits(conn.RateDown*8), bits(conn.RateUp*8)
 	data["MaxDown"], data["MaxUp"] = bits(conn.BandwidthDown), bits(conn.BandwidthUp)
@@ -112,4 +172,33 @@ func duration(d time.Duration) string {
 		return fmt.Sprintf("%d j %d h", days, h)
 	}
 	return fmt.Sprintf("%d h %02d min", h, m)
+}
+
+// shortDuration writes a duration the way people say it: "45 s", "12 min",
+// "2 h 05", "3 j 4 h".
+func shortDuration(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%d s", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%d min", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%d h %02d", int(d.Hours()), int(d.Minutes())%60)
+	}
+	return fmt.Sprintf("%d j %d h", int(d.Hours())/24, int(d.Hours())%24)
+}
+
+// band names a Wi-Fi band the same way everywhere: "2,4 GHz", "5 GHz"…
+func band(b string) string {
+	switch strings.ToLower(strings.TrimSpace(b)) {
+	case "2g4", "2.4g", "2d4g", "2.4ghz", "2,4 ghz":
+		return "2,4 GHz"
+	case "5g", "5ghz":
+		return "5 GHz"
+	case "6g", "6ghz":
+		return "6 GHz"
+	case "60g", "60ghz":
+		return "60 GHz"
+	}
+	return b
 }

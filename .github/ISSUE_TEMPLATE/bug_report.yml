@@ -1,18 +1,18 @@
-name: Bug report
-description: Something misbehaves
+name: Signaler un bug
+description: Quelque chose ne marche pas comme prévu
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please redact tokens, passwords and personal data from logs before
-        pasting them.
+        Retire les jetons, mots de passe et données personnelles (adresses IP,
+        MAC, noms d'appareils) des journaux avant de les coller.
 
   - type: input
     id: version
     attributes:
       label: Version
-      description: Release tag, image tag or commit
+      description: Tag de version, tag d'image ou commit
       placeholder: "v1.0.0 / dev"
     validations:
       required: true
@@ -20,15 +20,15 @@ body:
   - type: textarea
     id: what-happens
     attributes:
-      label: What happens
-      description: What you observed, and what you expected instead.
+      label: Ce qui se passe
+      description: Ce que tu observes, et ce que tu attendais à la place.
     validations:
       required: true
 
   - type: textarea
     id: repro
     attributes:
-      label: Steps to reproduce
+      label: Étapes pour reproduire
       placeholder: |
         1. ...
         2. ...
@@ -39,12 +39,12 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Logs
-      description: Relevant output. Redact first.
+      label: Journaux
+      description: Les sorties utiles, expurgées au préalable.
       render: text
 
   - type: input
     id: deployment
     attributes:
-      label: Deployment
-      placeholder: "docker compose, amd64, TrueNAS"
+      label: Déploiement
+      placeholder: "docker compose, amd64, NAS"

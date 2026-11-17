@@ -20,6 +20,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/neotoxicfr/neofreebox/internal/fbx"
 	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
 
@@ -30,6 +31,8 @@ type apiToken struct {
 	Name    string    `json:"name"`
 	Hash    string    `json:"hash"`
 	Created time.Time `json:"created"`
+	// ReadOnly tokens may only call operations that change nothing.
+	ReadOnly bool `json:"read_only,omitempty"`
 }
 
 type tokenStore struct {
@@ -59,7 +62,7 @@ func hashToken(tok string) string {
 }
 
 // create returns a new token, to show once.
-func (t *tokenStore) create(name string) (string, error) {
+func (t *tokenStore) create(name string, readOnly bool) (string, error) {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	tok := "nfb_" + base64.RawURLEncoding.EncodeToString(b)
@@ -68,7 +71,7 @@ func (t *tokenStore) create(name string) (string, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	list := append(append([]apiToken(nil), t.list...), apiToken{
-		ID: hex.EncodeToString(id), Name: name, Hash: hashToken(tok), Created: time.Now().UTC(),
+		ID: hex.EncodeToString(id), Name: name, Hash: hashToken(tok), Created: time.Now().UTC(), ReadOnly: readOnly,
 	})
 	if err := t.save(list); err != nil {
 		return "", err
@@ -76,7 +79,8 @@ func (t *tokenStore) create(name string) (string, error) {
 	return tok, nil
 }
 
-func (t *tokenStore) revoke(id string) error {
+// revoke removes a token; it reports whether one had that id.
+func (t *tokenStore) revoke(id string) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	var list []apiToken
@@ -85,7 +89,17 @@ func (t *tokenStore) revoke(id string) error {
 			list = append(list, x)
 		}
 	}
-	return t.save(list)
+	if len(list) == len(t.list) {
+		return false, nil
+	}
+	return true, t.save(list)
+}
+
+// revokeAll removes every token, after a password change.
+func (t *tokenStore) revokeAll() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.save(nil)
 }
 
 // save writes list and makes it current; t.mu is held.
@@ -111,32 +125,39 @@ func (t *tokenStore) all() []apiToken {
 	return append([]apiToken(nil), t.list...)
 }
 
-func (t *tokenStore) valid(tok string) bool {
+// lookup returns the stored token matching tok.
+func (t *tokenStore) lookup(tok string) (apiToken, bool) {
 	if !strings.HasPrefix(tok, "nfb_") {
-		return false
+		return apiToken{}, false
 	}
 	h := []byte(hashToken(tok))
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	var found apiToken
 	ok := false
 	for _, x := range t.list {
 		if subtle.ConstantTimeCompare(h, []byte(x.Hash)) == 1 {
-			ok = true
+			found, ok = x, true
 		}
 	}
-	return ok
+	return found, ok
 }
+
+type tokenKey struct{}
+
+var errReadOnlyToken = errors.New("this API token is read-only: it can only call operations that change nothing and reveal no secret")
 
 // bearer lets through requests carrying a valid API token.
 func (s *Server) bearer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || !s.tokens.valid(strings.TrimSpace(tok)) {
+		raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		tok, valid := s.tokens.lookup(strings.TrimSpace(raw))
+		if !ok || !valid {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="neofreebox"`)
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing or invalid API token"})
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), tokenKey{}, tok)))
 	})
 }
 
@@ -186,11 +207,15 @@ func (s *Server) apiCall(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) callOp(ctx context.Context, op ops.Op, args map[string]any) (json.RawMessage, error) {
+	tok, _ := ctx.Value(tokenKey{}).(apiToken)
+	if tok.ReadOnly && (!op.ReadOnly() || op.Secret) {
+		return nil, errReadOnlyToken
+	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	res, err := ops.Call(ctx, s.box, op, args)
-	if op.Method != http.MethodGet {
-		s.log.Info("api operation", "op", op.Name, "ok", err == nil)
+	if !op.ReadOnly() {
+		s.log.Info("api operation", "op", op.Name, "token", tok.Name, "ok", err == nil)
 	}
 	return res, err
 }
@@ -198,6 +223,9 @@ func (s *Server) callOp(ctx context.Context, op ops.Op, args map[string]any) (js
 func statusOf(err error) int {
 	if errors.Is(err, ops.ErrConfirm) {
 		return http.StatusPreconditionRequired
+	}
+	if errors.Is(err, errReadOnlyToken) || fbx.IsCode(err, "read_only") || fbx.IsCode(err, "insufficient_rights") {
+		return http.StatusForbidden
 	}
 	if strings.HasPrefix(err.Error(), "missing") || strings.HasPrefix(err.Error(), "argument") {
 		return http.StatusBadRequest
@@ -210,8 +238,11 @@ func describe(op ops.Op) string {
 	if op.Body && op.BodyHelp != "" {
 		d += " Body: " + op.BodyHelp
 	}
-	if op.Dangerous {
+	switch {
+	case op.Dangerous:
 		d += ` Dangerous: requires "confirm": true after the user agreed.`
+	case op.Secret:
+		d += ` Returns secrets (keys, passwords, share links): requires "confirm": true after the user agreed.`
 	}
 	return d
 }
@@ -223,8 +254,8 @@ func (s *Server) mcpHandler() http.Handler {
 			"Read-only tools are safe. Tools marked dangerous can cut the network or lose data: explain the effect to the user and only call them with confirm=true once they agreed.",
 	})
 	for _, op := range ops.All() {
-		ro := op.Method == http.MethodGet
-		destructive := op.Dangerous
+		ro := op.ReadOnly() && !op.Secret // a client must not auto-approve reading a secret
+		destructive := !ro                // the MCP default is true: say false only when nothing changes
 		srv.AddTool(&mcp.Tool{
 			Name:        op.Name,
 			Description: describe(op),

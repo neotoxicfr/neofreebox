@@ -36,6 +36,9 @@ func init() {
 	)
 }
 
+// tvLimit caps the channels drawn by default: each one carries record forms.
+const tvLimit = 100
+
 type tvBouquet struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
@@ -133,7 +136,12 @@ func (s *Server) tv(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, row)
 	}
 	sort.SliceStable(rows, func(i, j int) bool { return rows[i].Number < rows[j].Number })
-	data := map[string]any{"Rows": rows, "Bouquets": bouquets, "Bouquet": sel, "All": all, "Q": q}
+	total := len(rows)
+	full := r.URL.Query().Get("tout") == "1"
+	if !full && total > tvLimit {
+		rows = rows[:tvLimit]
+	}
+	data := map[string]any{"Rows": rows, "Bouquets": bouquets, "Bouquet": sel, "All": all, "Q": q, "Total": total, "Truncated": len(rows) < total}
 	if epgErr != nil {
 		s.log.Error("page", "page", "tv", "what", "epg", "err", epgErr)
 		data["EPGError"] = epgErr.Error()

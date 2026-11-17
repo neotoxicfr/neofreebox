@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -77,9 +78,9 @@ func TestCallsWrites(t *testing.T) {
 
 	post(t, c, srv, "/calls/7/read", nil)
 	post(t, c, srv, "/calls/read-all", nil)
-	post(t, c, srv, "/calls/6/delete", nil)
-	post(t, c, srv, "/calls/voicemail/20221215_154135_r1.au/read", nil)
 	confirm := url.Values{"confirm": {"1"}}
+	post(t, c, srv, "/calls/6/delete", confirm)
+	post(t, c, srv, "/calls/voicemail/20221215_154135_r1.au/read", nil)
 	post(t, c, srv, "/calls/voicemail/20221215_154135_r1.au/delete", confirm)
 	post(t, c, srv, "/calls/delete-all", confirm)
 
@@ -108,8 +109,53 @@ func TestCallsDangerousNeedConfirm(t *testing.T) {
 	c := browser(srv)
 	post(t, c, srv, "/setup", creds("admin", "correct horse battery"))
 	post(t, c, srv, "/calls/delete-all", nil)
+	post(t, c, srv, "/calls/6/delete", nil)
 	post(t, c, srv, "/calls/voicemail/20221215_154135_r1.au/delete", nil)
 	if w := box.lastWrites(); len(w) != 0 {
 		t.Fatalf("unconfirmed dangerous actions wrote %q", w)
 	}
+}
+
+func TestCallWho(t *testing.T) {
+	c := callEntry{Name: "01 99 00 00 05", Number: "0199000005"}
+	if c.ShowNumber() {
+		t.Error("number repeated next to a name that is the same number")
+	}
+	if !(callEntry{Name: "Alice", Number: "0199000005"}).ShowNumber() {
+		t.Error("number hidden next to a real name")
+	}
+	if (callEntry{Number: "0199000005"}).Who() != "0199000005" {
+		t.Error("Who without name")
+	}
+}
+
+func TestCallsLimit(t *testing.T) {
+	n := callsLimit + 5
+	srv := newTestServer(t, &bigCallsBox{n: n})
+	c := browser(srv)
+	post(t, c, srv, "/setup", creds("admin", "correct horse battery"))
+	_, body := get(t, c, srv, "/calls")
+	if strings.Count(body, "/delete\"") != callsLimit+1 || !strings.Contains(body, "Tout afficher (105)") {
+		t.Errorf("default page: want %d rows and the link", callsLimit)
+	}
+	_, body = get(t, c, srv, "/calls?all=1")
+	if strings.Count(body, "/delete\"") != n+1 || strings.Contains(body, "Tout afficher") {
+		t.Error("?all=1 must show everything")
+	}
+}
+
+type bigCallsBox struct {
+	callsBox
+	n int
+}
+
+func (b *bigCallsBox) Get(ctx context.Context, path string, out any) error {
+	if path != "call/log/" {
+		return b.callsBox.Get(ctx, path, out)
+	}
+	var parts []string
+	for i := range b.n {
+		parts = append(parts, `{"id":`+strconv.Itoa(i)+`,"type":"missed","datetime":1700000000,"number":"0199000005","name":"","duration":0,"new":false}`)
+	}
+	return json.Unmarshal([]byte("["+strings.Join(parts, ",")+"]"), out)
 }

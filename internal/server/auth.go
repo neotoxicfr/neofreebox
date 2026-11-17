@@ -33,7 +33,6 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subtle.ConstantTimeCompare([]byte(strings.TrimSpace(r.PostFormValue("code"))), []byte(s.setupCode)) != 1 {
-		s.limiter.fail()
 		s.render(w, http.StatusUnauthorized, "setup", map[string]any{"Error": "Code de configuration incorrect : il est affiché dans les journaux du conteneur.", "Username": user})
 		return
 	}
@@ -41,6 +40,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		s.render(w, http.StatusBadRequest, "setup", map[string]any{"Error": msg, "Username": user})
 		return
 	}
+	s.limiter.succeed() // the setup code was right
 	if err := s.account.set(user, pass, true); err != nil {
 		if errors.Is(err, errAccountExists) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -71,12 +71,14 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		s.render(w, http.StatusTooManyRequests, "login", map[string]any{"Error": "Trop d'essais. Réessaie dans quelques minutes.", "Username": user})
 		return
 	}
+	s.authMu.Lock() // a password change must not race a sign-in
+	defer s.authMu.Unlock()
 	if !s.account.check(user, pass) {
-		s.limiter.fail()
-		s.log.Warn("failed sign-in", "username", user)
+		s.log.Warn("failed sign-in")
 		s.render(w, http.StatusUnauthorized, "login", map[string]any{"Error": "Identifiant ou mot de passe incorrect.", "Username": user})
 		return
 	}
+	s.limiter.succeed()
 	s.startSession(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -96,6 +98,10 @@ func (s *Server) accountPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
+	// Held to the end: no sign-in or token can slip in between checking the
+	// old password and revoking what it opened.
+	s.authMu.Lock()
+	defer s.authMu.Unlock()
 	r.Body = http.MaxBytesReader(w, r.Body, maxForm)
 	cur, pass, confirm := r.PostFormValue("current"), r.PostFormValue("password"), r.PostFormValue("confirm")
 	data := s.accountData()
@@ -105,11 +111,11 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.account.check(s.account.Username, cur) {
-		s.limiter.fail()
 		data["Error"] = "Mot de passe actuel incorrect."
 		s.render(w, http.StatusUnauthorized, "account", data)
 		return
 	}
+	s.limiter.succeed()
 	if msg := checkCredentials(s.account.Username, pass, confirm); msg != "" {
 		data["Error"] = msg
 		s.render(w, http.StatusBadRequest, "account", data)
@@ -121,7 +127,12 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.sessions.dropAll()
+	// A stolen session could have created tokens: a new password ends them too.
+	if err := s.tokens.revokeAll(); err != nil {
+		s.log.Error("revoke tokens", "err", err)
+	}
 	s.startSession(w)
+	data = s.accountData()
 	data["Done"] = true
 	s.render(w, http.StatusOK, "account", data)
 }
@@ -174,13 +185,22 @@ func (s *Server) accountData() map[string]any {
 }
 
 func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
+	// Re-asking the password keeps a stolen session from minting a lasting key.
+	s.authMu.Lock()
+	defer s.authMu.Unlock()
+	if !s.limiter.allow() || !s.account.check(s.account.Username, r.PostFormValue("password")) {
+		setFlash(w, "err:Mot de passe incorrect : le jeton n'a pas été créé.")
+		http.Redirect(w, r, "/account", http.StatusSeeOther)
+		return
+	}
+	s.limiter.succeed()
 	name := formStr(r, "name")
 	if name == "" || utf8.RuneCountInString(name) > 64 {
 		setFlash(w, "err:Donne un nom au jeton (64 caractères au plus).")
 		http.Redirect(w, r, "/account", http.StatusSeeOther)
 		return
 	}
-	tok, err := s.tokens.create(name)
+	tok, err := s.tokens.create(name, formBool(r, "read_only"))
 	if err != nil {
 		s.log.Error("create token", "err", err)
 		http.Error(w, "Erreur interne", http.StatusInternalServerError)
@@ -193,10 +213,13 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
-	if err := s.tokens.revoke(r.PathValue("id")); err != nil {
+	switch found, err := s.tokens.revoke(r.PathValue("id")); {
+	case err != nil:
 		s.log.Error("revoke token", "err", err)
-		setFlash(w, "err:"+err.Error())
-	} else {
+		setFlash(w, "err:Le jeton n'a pas pu être révoqué.")
+	case !found:
+		setFlash(w, "err:Ce jeton n'existe plus.")
+	default:
 		setFlash(w, "ok:Jeton révoqué.")
 	}
 	http.Redirect(w, r, "/account", http.StatusSeeOther)

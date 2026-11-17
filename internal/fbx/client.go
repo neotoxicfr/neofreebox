@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -59,15 +60,28 @@ func New(baseURL string, app App, token string) (*Client, error) {
 	if baseURL == "" {
 		baseURL = DefaultURL
 	}
+	if !strings.HasPrefix(baseURL, "https://") {
+		// The session token and the app token's proof travel in these requests.
+		return nil, fmt.Errorf("fbx: the box URL must use https, not %q", baseURL)
+	}
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(caPEM) {
 		return nil, errors.New("fbx: embedded CA certificates are invalid")
 	}
 	return &Client{
 		base: strings.TrimRight(baseURL, "/") + fmt.Sprintf("/api/v%d", APIVersion),
+		// No overall Timeout: it would also cut file downloads streamed by
+		// Raw. Callers bound each call with their context; the transport
+		// bounds connecting and waiting for headers.
 		http: &http.Client{
-			Timeout:   20 * time.Second,
-			Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}},
+			Transport: &http.Transport{
+				TLSClientConfig:       &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
+				DialContext:           (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 30 * time.Second,
+				MaxIdleConnsPerHost:   6, // pages read several endpoints at once
+				IdleConnTimeout:       90 * time.Second,
+			},
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
@@ -113,6 +127,13 @@ func (c *Client) Get(ctx context.Context, path string, out any) error {
 // ("lan/browser/pub/"). in, if not nil, is sent as JSON. A dropped session
 // is reopened once.
 func (c *Client) Do(ctx context.Context, method, path string, in, out any) error {
+	if _, ok := ctx.Deadline(); !ok {
+		// JSON answers are small: bound calls that come without a deadline
+		// (the CLI), so a stalled body cannot hold the session lock forever.
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+	}
 	sess, err := c.ensureSession(ctx)
 	if err != nil {
 		return err
