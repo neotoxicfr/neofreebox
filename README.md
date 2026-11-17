@@ -4,7 +4,7 @@
 
 # neofreebox
 
-**Un panneau de contrôle rapide et auto-hébergé pour la Freebox Pop.**
+**Un panneau de contrôle rapide et auto-hébergé pour ta Freebox.**
 
 Tout ce que fait l'interface web de Freebox OS, via l'API officielle,
 dans une petite application que tu fais tourner sur ton propre serveur.
@@ -30,10 +30,13 @@ dans une petite application que tu fais tourner sur ton propre serveur.
 
 <p align="center"><sub>Captures faites en mode démo (<code>NEOFREEBOX_DEMO=true</code>) : toutes les données sont fictives.</sub></p>
 
-> [!WARNING]
-> **Version préliminaire.** Toutes les sections de Freebox OS sont couvertes,
-> mais toutes les écritures n'ont pas encore été essayées sur une vraie box.
-> Le mode lecture seule (`NEOFREEBOX_READ_ONLY=true`) permet de tout parcourir sans risque.
+> [!NOTE]
+> **Testée sur Freebox Pop.** neofreebox passe par l'API officielle Freebox OS, commune aux
+> Freebox Server récentes (Ultra, Delta, Pop, Révolution, Mini 4K) : elle devrait fonctionner
+> sur les autres modèles, avec les fonctions que chacun propose. Un écart sur ton modèle ?
+> [Ouvre une issue](https://github.com/neotoxicfr/neofreebox/issues/new/choose).
+> Pour découvrir l'appli sans rien risquer : mode lecture seule (`NEOFREEBOX_READ_ONLY=true`)
+> ou mode démo (`NEOFREEBOX_DEMO=true`).
 
 ## Pourquoi neofreebox
 
@@ -106,7 +109,8 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
 
 ## Prérequis
 
-- Une Freebox avec l'API Freebox OS (testé sur une Freebox Pop, API v16).
+- Une Freebox Server sous Freebox OS avec l'API v16 (testée sur Freebox Pop ; Ultra, Delta,
+  Révolution et Mini 4K partagent la même API).
 - Un serveur Docker sur le réseau local de la box : elle ne répond que depuis ce réseau.
 - Un reverse proxy en HTTPS devant neofreebox (Traefik, Caddy…), idéalement avec sa
   propre authentification (Authelia, Authentik…). Le cookie de session est `Secure`.
@@ -114,8 +118,8 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
 ## Démarrer
 
 1. **Appairer l'application**, une seule fois, depuis une machine du réseau local de la box.
-   La demande s'affiche sur l'écran du dessus de la Freebox Pop (allume-le s'il est éteint) :
-   valide-la là, dans la minute ou deux qui suivent.
+   La demande s'affiche sur l'écran de la Freebox Server (sur la Pop, le petit écran du dessus,
+   à allumer s'il est éteint) : valide-la là, dans la minute ou deux qui suivent.
 
    L'image tourne sans privilèges (UID 65532) : donne-lui d'abord les dossiers montés.
 
@@ -138,6 +142,11 @@ marqués « destructifs » et refusés tant que `confirm` n'est pas à `true`.
 **Essayer sans box** : `docker run --rm -p 8080:8080 -e NEOFREEBOX_DEMO=true ghcr.io/neotoxicfr/neofreebox:latest`,
 puis ouvre <http://localhost:8080> (compte `demo` / `demo-neofreebox`). Les données sont
 fictives, aucune box n'est contactée et les modifications sont sans effet.
+
+**Versions de l'image** : `latest` et `X.Y.Z` (par exemple `0.1.0`) suivent les
+[releases](https://github.com/neotoxicfr/neofreebox/releases) ; `dev` suit la branche de développement.
+Pour mettre à jour : `docker compose pull && docker compose up -d`. Le compte et les jetons sont
+conservés dans le volume de données.
 
 ### Variables d'environnement
 
