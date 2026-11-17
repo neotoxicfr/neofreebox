@@ -44,7 +44,8 @@ Environment:
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
   NEOFREEBOX_READ_ONLY       true to refuse every write to the box (demos, audits)
   NEOFREEBOX_DEMO            true to run on a built-in fake box with fictional data: no token,
-                             no box needed; sign in as demo / demo-neofreebox
+                             no box needed; sign in as demo / demo-neofreebox (data in a temporary
+                             directory, deleted on exit: never NEOFREEBOX_DATA_DIR)
 `
 
 func main() {
@@ -168,6 +169,16 @@ func serve(ctx context.Context) error {
 		box = c
 	}
 	dir := envOr("NEOFREEBOX_DATA_DIR", "./data")
+	if demoMode {
+		// The demo account has a public password: it must never land in a
+		// data directory that a real instance could reuse.
+		tmp, err := os.MkdirTemp("", "neofreebox-demo-")
+		if err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		defer func() { _ = os.RemoveAll(tmp) }()
+		dir = tmp
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}

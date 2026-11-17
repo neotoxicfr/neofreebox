@@ -17,17 +17,19 @@ func (b *Box) rrd(in any) M {
 	}
 	raw, _ := json.Marshal(in)
 	_ = json.Unmarshal(raw, &req)
+	// Clamp the window: at most a year back from now, about 200 points.
+	now := b.Now().Unix()
 	end := req.DateEnd
-	if end == 0 {
-		end = b.Now().Unix()
+	if end <= 0 || end > now {
+		end = now
 	}
 	start := req.DateStart
-	if start == 0 || start >= end {
+	if start <= 0 || start >= end || end-start > 366*86400 {
 		start = end - 86400
 	}
 	step := max((end-start)/200, 10)
 	data := L{}
-	for t := start - start%step; t <= end; t += step {
+	for t, n := start-start%step, 0; t <= end && n < 400; t, n = t+step, n+1 {
 		p := M{"time": t}
 		day := float64(t%86400) / 86400 * 2 * math.Pi
 		switch req.DB {
