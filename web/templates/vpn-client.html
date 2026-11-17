@@ -1,0 +1,131 @@
+{{define "title"}}Client VPN · neofreebox{{end}}
+{{define "content"}}
+<h1>Client VPN</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">La box se connecte à un VPN distant. Une seule configuration peut être active ; une fois connectée, tout le trafic de la box passe dans le tunnel.</p>
+<div class="grid">
+  <section class="card">
+    <h2>État</h2>
+    {{if .Status.Enabled}}
+    <p class="big"><span class="badge {{if eq .Status.State "up"}}on{{else}}off{{end}}">{{.Status.StateLabel}}</span></p>
+    <dl>
+      <dt>Configuration</dt><dd>{{.Status.Description}}</dd>
+      {{if .Status.IPv4.IPMask.IP}}<dt>Adresse</dt><dd class="mono">{{.Status.IPv4.IPMask.IP}}</dd>{{end}}
+      {{if .Status.IPv4.Gateway}}<dt>Passerelle</dt><dd class="mono">{{.Status.IPv4.Gateway}}</dd>{{end}}
+      {{if .Status.IPv4.DNS}}<dt>DNS</dt><dd class="mono">{{range .Status.IPv4.DNS}}{{.}} {{end}}</dd>{{end}}
+      <dt>Reçu</dt><dd>{{bytes .Status.Stats.BytesDown}} ({{bytes .Status.Stats.RateDown}}/s)</dd>
+      <dt>Envoyé</dt><dd>{{bytes .Status.Stats.BytesUp}} ({{bytes .Status.Stats.RateUp}}/s)</dd>
+      {{if .Status.LastUp}}<dt>Dernière connexion</dt><dd>{{date .Status.LastUp}}</dd>{{end}}
+      {{if .Status.ErrorLabel}}<dt>Dernière erreur</dt><dd>{{.Status.ErrorLabel}}</dd>{{end}}
+    </dl>
+    {{else}}
+    <p><span class="badge off">inactif</span></p>
+    <p class="muted">Aucune configuration n'est activée.</p>
+    {{end}}
+  </section>
+</div>
+
+<section class="card section">
+  <h2>Configurations</h2>
+  {{if .Configs}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Nom</th><th>Type</th><th>Serveur distant</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Configs}}
+    <tr>
+      <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{if .Active}}active{{else}}inactive{{end}}</span> {{or .Description .ID}}</td>
+      <td data-label="Type">{{.Type}}</td>
+      <td class="mono" data-label="Serveur distant">{{.Remote}}</td>
+      <td>
+        <div class="actions">
+          {{if .Active}}
+          <form method="post" action="/vpn-client/{{.ID}}/deactivate"><button class="ghost small">Désactiver</button></form>
+          {{else}}
+          <details class="inline">
+            <summary class="ghost-btn danger">Activer</summary>
+            <form method="post" action="/vpn-client/{{.ID}}/activate" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le trafic de la box partira dans le tunnel, et que l'accès à distance peut être coupé si le VPN ne fonctionne pas.</label>
+              <button class="danger small">Activer « {{or .Description .ID}} »</button>
+            </form>
+          </details>
+          {{end}}
+          <details class="inline">
+            <summary class="ghost-btn">Renommer</summary>
+            <form method="post" action="/vpn-client/{{.ID}}/rename" class="row">
+              <label class="grow">Nom<input name="description" value="{{.Description}}" required maxlength="64"></label>
+              <button class="small">Enregistrer</button>
+            </form>
+          </details>
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer</summary>
+            <form method="post" action="/vpn-client/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette configuration{{if .Active}} (active : le tunnel sera coupé){{end}} sera supprimée.</label>
+              <button class="danger small">Supprimer</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucune configuration VPN.</p>{{end}}
+
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter une configuration</summary>
+    <form method="post" action="/vpn-client/add" class="stack">
+      <p class="hint">Elle est créée inactive : tu l'actives ensuite depuis la liste.</p>
+      <div class="row">
+        <label class="grow">Nom<input name="description" required maxlength="64"></label>
+        <label>Type
+          <select name="type">
+            <option value="wireguard">WireGuard</option>
+            <option value="pptp">PPTP</option>
+          </select>
+        </label>
+      </div>
+      <h3>WireGuard</h3>
+      <div class="row">
+        <label class="grow">Serveur distant<input name="remote_addr" placeholder="vpn.example.org"></label>
+        <label>Port<input type="number" name="remote_port" value="51820" min="1" max="65535"></label>
+      </div>
+      <label>Clé publique du serveur<input name="remote_public_key" class="mono" autocomplete="off"></label>
+      <label>Clé pré-partagée (facultatif)<input type="password" name="remote_preshared_key" class="mono" autocomplete="off"></label>
+      <label>Clé privée locale<input type="password" name="local_priv_key" class="mono" autocomplete="off"></label>
+      <div class="row">
+        <label>Adresse locale<input name="local_ip" placeholder="10.0.0.2"></label>
+        <label>Préfixe<input type="number" name="local_len" value="32" min="1" max="128"></label>
+        <label class="grow">DNS (séparés par des espaces)<input name="dns"></label>
+        <label>MTU<input type="number" name="mtu" min="512" max="1500" placeholder="1420"></label>
+      </div>
+      <h3>PPTP</h3>
+      <div class="row">
+        <label class="grow">Serveur distant<input name="remote_host"></label>
+        <label>Identifiant<input name="username" autocomplete="off"></label>
+        <label>Mot de passe<input type="password" name="password" autocomplete="new-password"></label>
+        <label>MPPE
+          <select name="mppe">
+            <option value="require">Obligatoire</option>
+            <option value="require_128">Obligatoire (128 bits)</option>
+            <option value="disable">Désactivé</option>
+          </select>
+        </label>
+      </div>
+      <button class="small">Ajouter</button>
+    </form>
+  </details>
+</section>
+
+{{if .Log}}
+<section class="card section">
+  <h2>Journal</h2>
+  <details class="inline">
+    <summary class="ghost-btn">Afficher le journal</summary>
+    <pre class="code">{{.Log}}</pre>
+  </details>
+</section>
+{{end}}
+{{end}}
+{{end}}
