@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/neotoxicfr/neofreebox/internal/demo"
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
 	"github.com/neotoxicfr/neofreebox/internal/server"
 )
@@ -42,6 +43,8 @@ Environment:
   NEOFREEBOX_BOX_URL         box URL (default ` + fbx.DefaultURL + `)
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
   NEOFREEBOX_READ_ONLY       true to refuse every write to the box (demos, audits)
+  NEOFREEBOX_DEMO            true to run on a built-in fake box with fictional data: no token,
+                             no box needed; sign in as demo / demo-neofreebox
 `
 
 func main() {
@@ -151,23 +154,36 @@ func client() (*fbx.Client, error) {
 
 func serve(ctx context.Context) error {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	c, err := client()
-	if err != nil {
-		return fmt.Errorf("serve: %w", err)
+	demoMode, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_DEMO"))
+	var c *fbx.Client
+	var box server.Box
+	if demoMode {
+		box = demo.New()
+		log.Warn("demo mode: fictional data, no box is contacted", "user", server.DemoUser, "password", server.DemoPassword)
+	} else {
+		var err error
+		if c, err = client(); err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		box = c
 	}
 	dir := envOr("NEOFREEBOX_DATA_DIR", "./data")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
 	server.Version = version
-	var box server.Box = c
-	if ro, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_READ_ONLY")); ro {
+	if ro, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_READ_ONLY")); ro && c != nil {
 		box = readOnly{c}
 		log.Warn("read-only mode: no write is sent to the box")
 	}
 	s, err := server.New(box, dir, log)
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
+	}
+	if demoMode {
+		if err := s.EnableDemo(); err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
 	}
 	srv := &http.Server{
 		Addr:              envOr("NEOFREEBOX_ADDR", ":8080"),
@@ -181,7 +197,9 @@ func serve(ctx context.Context) error {
 		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(sctx)
-		_ = c.Logout(sctx)
+		if c != nil {
+			_ = c.Logout(sctx)
+		}
 	}()
 	log.Info("listening", "addr", srv.Addr, "version", version)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {

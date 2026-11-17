@@ -57,6 +57,7 @@ button.ghost { background: transparent; color: var(--muted); border: 1px solid v
 button.ghost:hover { color: var(--text); }
 
 .error, .ok { padding: .75rem 1rem; border-radius: 6px; margin: 0 0 var(--gap); }
+.demo { margin: 0 0 var(--gap); padding: .25rem .75rem; border-radius: 6px; border: 1px dashed var(--warn); color: var(--warn); font-size: .875rem; width: fit-content; }
 .error { background: var(--err-bg); color: var(--err); }
 .ok { background: var(--ok-bg); color: var(--ok); }
 .muted { color: var(--muted); }
