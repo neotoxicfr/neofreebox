@@ -40,3 +40,4 @@ plans/
 # Freebox app token and local secrets
 *.token
 secrets/
+/freebox.token

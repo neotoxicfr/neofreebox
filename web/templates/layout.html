@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>{{block "title" .}}neofreebox{{end}}</title>
+<link rel="stylesheet" href="/static/app.css?v={{version}}">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+</head>
+<body>
+{{if .Nav}}
+<header class="bar">
+  <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="24" height="24">neofreebox</a>
+  <nav aria-label="Principale">
+    <a href="/"{{if eq .Nav "status"}} aria-current="page"{{end}}>État</a>
+    <a href="/account"{{if eq .Nav "account"}} aria-current="page"{{end}}>Compte</a>
+  </nav>
+  <form method="post" action="/logout"><button class="ghost">Se déconnecter</button></form>
+</header>
+{{end}}
+<main{{if not .Nav}} class="narrow"{{end}}>
+{{block "content" .}}{{end}}
+</main>
+</body>
+</html>

@@ -34,8 +34,9 @@ pages on the server and keeps the browser side to a minimum:
 
 Network comes first, then the rest of Freebox OS:
 
-- [ ] Freebox OS API client: discovery, app pairing, sessions, live events
-- [ ] App shell: login, box status, deployment
+- [x] Freebox OS API client: app pairing, sessions
+- [x] App shell: login, box status, container image
+- [ ] Live events from the box (WebSocket)
 - [ ] Network: devices, DHCP, port forwarding, DMZ, UPnP, Wi-Fi, IPv6, DNS, remote access
 - [ ] WireGuard VPN server: peers, config files and QR codes
 - [ ] Monitoring: live bandwidth, history, events, fibre line
@@ -54,9 +55,27 @@ Network comes first, then the rest of Freebox OS:
 
 ## Getting started
 
-Installation steps will be written with the first release: pair the app with
-the box (you confirm the request on the box), store the app token as a secret
-file, then start the container.
+1. **Pair the app**, once, from a machine on the box's local network. The
+   request shows on the screen on top of the box (turn the screen on if it is
+   off) and must be accepted there within a minute or two:
+
+   ```bash
+   docker run --rm -it -v "$PWD/secrets:/out" ghcr.io/neotoxicfr/neofreebox:latest \
+     pair -o /out/freebox_app_token
+   ```
+
+2. **Grant every right** in Freebox OS → Paramètres de la Freebox → Gestion
+   des accès → Applications → neofreebox (new apps only get a few by default).
+3. **Start it** with [`deploy/compose.yml.example`](deploy/compose.yml.example);
+   `docker compose run --rm neofreebox check` prints the rights it got.
+4. Open it: the first visit asks you to create the account.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `NEOFREEBOX_APP_TOKEN_FILE` | — | file holding the app token (required) |
+| `NEOFREEBOX_BOX_URL` | `https://mafreebox.freebox.fr` | the box |
+| `NEOFREEBOX_DATA_DIR` | `/data` | where the account is kept |
+| `NEOFREEBOX_ADDR` | `:8080` | listen address |
 
 ## How it works
 

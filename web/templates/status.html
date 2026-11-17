@@ -1,0 +1,38 @@
+{{define "title"}}État · neofreebox{{end}}
+{{define "content"}}
+<h1>État de la Freebox</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+  <section class="card">
+    <h2>Connexion internet</h2>
+    <p class="big"><span class="dot {{if eq .Conn.State "up"}}up{{else}}down{{end}}"></span>{{if eq .Conn.State "up"}}Connectée{{else}}{{.Conn.State}}{{end}}</p>
+    <dl>
+      <dt>Média</dt><dd>{{.Conn.Media}}</dd>
+      <dt>IPv4</dt><dd class="mono">{{.Conn.IPv4}}</dd>
+      {{if .Conn.IPv6}}<dt>IPv6</dt><dd class="mono">{{.Conn.IPv6}}</dd>{{end}}
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Débit</h2>
+    <dl class="rates">
+      <dt>Réception</dt><dd><span class="big">{{.Down}}</span> <span class="muted max">sur {{.MaxDown}}</span></dd>
+      <dt>Envoi</dt><dd><span class="big">{{.Up}}</span> <span class="muted max">sur {{.MaxUp}}</span></dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Box</h2>
+    <dl>
+      <dt>Modèle</dt><dd>{{.System.ModelInfo.PrettyName}}</dd>
+      <dt>Firmware</dt><dd>{{.System.FirmwareVersion}}</dd>
+      <dt>Allumée depuis</dt><dd>{{.Uptime}}</dd>
+      {{range .System.Sensors}}<dt>{{.Name}}</dt><dd>{{.Value}} °C</dd>{{end}}
+      {{range .System.Fans}}<dt>{{.Name}}</dt><dd>{{.Value}} tr/min</dd>{{end}}
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Droits de neofreebox</h2>
+    <ul class="tags">{{range .Rights}}<li>{{.}}</li>{{end}}</ul>
+  </section>
+</div>
+{{end}}
+{{end}}

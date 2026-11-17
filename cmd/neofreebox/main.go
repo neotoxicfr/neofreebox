@@ -6,13 +6,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
+	"github.com/neotoxicfr/neofreebox/internal/server"
 )
 
 // version is set at build time.
@@ -23,10 +27,14 @@ const appID = "io.github.neotoxicfr.neofreebox"
 
 const usage = `usage: neofreebox <command>
 
+  serve          run the web interface
   pair -o FILE   ask the box for an app token (confirm on the box), save it to FILE
   check          open a session with the token and print the box and its rights
+  healthcheck    exit 0 if the local server answers (for the container)
 
 Environment:
+  NEOFREEBOX_ADDR            listen address (default :8080)
+  NEOFREEBOX_DATA_DIR        where the account is kept (default ./data)
   NEOFREEBOX_BOX_URL         box URL (default ` + fbx.DefaultURL + `)
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
 `
@@ -36,14 +44,18 @@ func main() {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	var err error
 	switch os.Args[1] {
+	case "serve":
+		err = serve(ctx)
 	case "pair":
 		err = pair(ctx, os.Args[2:])
 	case "check":
 		err = check(ctx)
+	case "healthcheck":
+		err = healthcheck(ctx)
 	default:
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
@@ -113,18 +125,92 @@ func pair(ctx context.Context, args []string) error {
 	}
 }
 
-func check(ctx context.Context) error {
+// client builds a box client from the token file.
+func client() (*fbx.Client, error) {
 	path := os.Getenv("NEOFREEBOX_APP_TOKEN_FILE")
 	if path == "" {
-		return errors.New("check: NEOFREEBOX_APP_TOKEN_FILE is not set")
+		return nil, errors.New("NEOFREEBOX_APP_TOKEN_FILE is not set")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("check: %w", err)
+		return nil, err
 	}
-	c, err := fbx.New(os.Getenv("NEOFREEBOX_BOX_URL"), app(), strings.TrimSpace(string(b)))
+	token := strings.TrimSpace(string(b))
+	if token == "" {
+		return nil, fmt.Errorf("%s is empty", path)
+	}
+	return fbx.New(os.Getenv("NEOFREEBOX_BOX_URL"), app(), token)
+}
+
+func serve(ctx context.Context) error {
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	c, err := client()
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+	dir := envOr("NEOFREEBOX_DATA_DIR", "./data")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+	server.Version = version
+	s, err := server.New(c, dir, log)
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+	srv := &http.Server{
+		Addr:              envOr("NEOFREEBOX_ADDR", ":8080"),
+		Handler:           s.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+	}
+	go func() {
+		<-ctx.Done()
+		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(sctx)
+		_ = c.Logout(sctx)
+	}()
+	log.Info("listening", "addr", srv.Addr, "version", version)
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+func healthcheck(ctx context.Context) error {
+	addr := envOr("NEOFREEBOX_ADDR", ":8080")
+	if strings.HasPrefix(addr, ":") {
+		addr = "127.0.0.1" + addr
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+addr+"/healthz", nil)
 	if err != nil {
 		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("healthz: %s", resp.Status)
+	}
+	return nil
+}
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func check(ctx context.Context) error {
+	c, err := client()
+	if err != nil {
+		return fmt.Errorf("check: %w", err)
 	}
 	defer func() { _ = c.Logout(context.WithoutCancel(ctx)) }()
 	var sys struct {

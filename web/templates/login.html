@@ -1,0 +1,11 @@
+{{define "title"}}Connexion · neofreebox{{end}}
+{{define "content"}}
+<img class="logo" src="/static/icon.svg" alt="" width="48" height="48">
+<h1>Connexion</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form method="post" action="/login" class="card stack">
+  <label>Identifiant<input name="username" autocomplete="username" required value="{{.Username}}" autofocus></label>
+  <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+  <button>Se connecter</button>
+</form>
+{{end}}

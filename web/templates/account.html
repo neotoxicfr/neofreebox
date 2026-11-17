@@ -1,0 +1,14 @@
+{{define "title"}}Compte · neofreebox{{end}}
+{{define "content"}}
+<h1>Compte</h1>
+<p class="muted">Connecté en tant que <strong>{{.Username}}</strong>.</p>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+{{if .Done}}<p class="ok" role="status">Mot de passe changé. Les autres appareils sont déconnectés.</p>{{end}}
+<form method="post" action="/account" class="card stack form">
+  <h2>Changer le mot de passe</h2>
+  <label>Mot de passe actuel<input name="current" type="password" autocomplete="current-password" required></label>
+  <label>Nouveau mot de passe <span class="hint">12 caractères au moins</span><input name="password" type="password" autocomplete="new-password" required minlength="12"></label>
+  <label>Confirmation<input name="confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+  <button>Changer</button>
+</form>
+{{end}}

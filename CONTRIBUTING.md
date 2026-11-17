@@ -9,6 +9,7 @@
 - **actionlint** *(optional)*: validates workflow changes
 
 ```bash
+neofreebox pair -o freebox.token   # once, on the box's network
 make dev    # serves on :8080, data in ./data
 ```
 

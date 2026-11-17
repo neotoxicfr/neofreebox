@@ -1,0 +1,30 @@
+# Copy to docker-compose.yml and adjust. Put neofreebox behind a reverse proxy
+# with HTTPS (the session cookie is Secure), ideally with its own
+# authentication (Authelia, Authentik…). The server must be on the box's
+# local network: the box only answers mafreebox.freebox.fr from there.
+#
+# The app token comes from `neofreebox pair -o freebox_app_token`, run once on
+# that network while you confirm the request on the box's screen. Give the
+# file to UID 65532 (the image's user), mode 0400.
+services:
+  neofreebox:
+    image: ghcr.io/neotoxicfr/neofreebox:latest
+    container_name: neofreebox
+    restart: unless-stopped
+    environment:
+      NEOFREEBOX_APP_TOKEN_FILE: /run/secrets/freebox_app_token
+      # NEOFREEBOX_BOX_URL: https://mafreebox.freebox.fr
+    secrets:
+      - freebox_app_token
+    volumes:
+      - ./data:/data
+    ports:
+      - "8080:8080"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  freebox_app_token:
+    file: ./secrets/freebox_app_token
