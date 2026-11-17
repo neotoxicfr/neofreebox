@@ -117,7 +117,7 @@ func TestCallsDangerousNeedConfirm(t *testing.T) {
 }
 
 func TestCallWho(t *testing.T) {
-	c := callEntry{Name: "01 02 03 04 05", Number: "0199000005"}
+	c := callEntry{Name: "01 99 00 00 05", Number: "0199000005"}
 	if c.ShowNumber() {
 		t.Error("number repeated next to a name that is the same number")
 	}

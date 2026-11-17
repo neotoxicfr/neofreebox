@@ -68,7 +68,7 @@ func TestContactsPage(t *testing.T) {
 		}
 	}
 	// Search by number ignores spaces; by name ignores case.
-	if _, body := get(t, c, srv, "/contacts?q=06+11+22"); !strings.Contains(body, "Alice Test") || strings.Contains(body, "Bob Exemple") {
+	if _, body := get(t, c, srv, "/contacts?q=06+39+98+00+11"); !strings.Contains(body, "Alice Test") || strings.Contains(body, "Bob Exemple") {
 		t.Error("search by number wrong")
 	}
 	if _, body := get(t, c, srv, "/contacts?q=BOB"); strings.Contains(body, "Alice Test") || !strings.Contains(body, "Bob Exemple") {
