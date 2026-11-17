@@ -94,7 +94,7 @@ func init() {
 		ops.Op{Name: "wifi_bss_mlo_set", Description: "Set the Multi-Link Operation partners of a network, from wifi_bss_mlo_allowed. Can briefly drop the devices on that network.",
 			Method: http.MethodPut, Path: "wifi/bss/{id}/mlo/config/", Params: []ops.Param{bssID}, Body: true, Dangerous: true,
 			BodyHelp: `{"partners": [0, 10]}`},
-		ops.Op{Name: "wifi_defaults_get", Description: "Get the default configuration of every radio (aps) and network (bsss) in one call. The default keys are returned in clear.",
+		ops.Op{Name: "wifi_defaults_get", Secret: true, Description: "Get the default configuration of every radio (aps) and network (bsss) in one call. The default keys are returned in clear.",
 			Path: "wifi/default"},
 		ops.Op{Name: "wifi_diag_get", Description: "Global Wi-Fi diagnostic: aps and bsss items with severity (minor or major) and code.",
 			Path: "wifi/diag"},

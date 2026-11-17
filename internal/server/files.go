@@ -79,7 +79,7 @@ func init() {
 			Path: "fs/mkdir/", Body: true, BodyHelp: `{"parent": "<base64 folder>", "dirname": "New folder"}`},
 		ops.Op{Name: "files_rename", Description: "Rename a file or folder (immediate); dst is the new name in clear text, without path. Returns the new base64 path.", Method: http.MethodPost,
 			Path: "fs/rename/", Body: true, BodyHelp: `{"src": "<base64 path>", "dst": "new name.txt"}`},
-		ops.Op{Name: "files_share_list", Description: "List the share links: token, path, name, expire (unix time, 0 = never), fullurl (empty if remote HTTP access is off).",
+		ops.Op{Name: "files_share_list", Secret: true, Description: "List the share links: token, path, name, expire (unix time, 0 = never), fullurl (empty if remote HTTP access is off).",
 			Path: "share_link/"},
 		ops.Op{Name: "files_share_get", Description: "Get one share link.", Path: "share_link/{token}", Params: []ops.Param{{Name: "token", Description: "Share link token"}}},
 		ops.Op{Name: "files_share_create", Description: "Create a share link to a file or folder: anyone with the URL can read it from the internet when remote HTTP access is on.", Method: http.MethodPost,
