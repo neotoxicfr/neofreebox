@@ -33,7 +33,7 @@ func init() {
 		s.page(mux, "POST /files/tasks/{id}/delete", s.taskDelete)
 	}})
 	p := func(what string) ops.Param {
-		return ops.Param{Name: "path", Description: what + " (base64, as returned by files_ls)"}
+		return ops.Param{Name: "path", Description: what + " (base64, as returned by files_ls)", Base64: true}
 	}
 	q := func(name, what string) ops.Param {
 		return ops.Param{Name: name, Type: "boolean", Description: what, Query: true}

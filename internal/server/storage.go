@@ -166,8 +166,8 @@ func (s *Server) storage(w http.ResponseWriter, r *http.Request) {
 	s.show(w, r, "storage", map[string]any{"Disks": disks, "Config": cfg, "Raids": raids}, err)
 }
 
-// pathID reads a numeric {id} from the URL; anything else is refused.
-func pathID(w http.ResponseWriter, r *http.Request, back string) (int, bool) {
+// storageID reads a numeric {id} from the URL; anything else is refused.
+func storageID(w http.ResponseWriter, r *http.Request, back string) (int, bool) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil || id < 0 {
 		setFlash(w, "err:Identifiant invalide.")
@@ -178,7 +178,7 @@ func pathID(w http.ResponseWriter, r *http.Request, back string) (int, bool) {
 }
 
 func (s *Server) diskState(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "/storage")
+	id, ok := storageID(w, r, "/storage")
 	if !ok {
 		return
 	}
@@ -202,7 +202,7 @@ func (s *Server) diskState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) diskFormat(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "/storage")
+	id, ok := storageID(w, r, "/storage")
 	if !ok {
 		return
 	}
@@ -221,7 +221,7 @@ func (s *Server) diskFormat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) partitionState(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "/storage")
+	id, ok := storageID(w, r, "/storage")
 	if !ok {
 		return
 	}
@@ -245,7 +245,7 @@ func (s *Server) partitionState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) partitionCheck(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "/storage")
+	id, ok := storageID(w, r, "/storage")
 	if !ok {
 		return
 	}

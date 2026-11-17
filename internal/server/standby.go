@@ -43,7 +43,7 @@ type standbyStatus struct {
 
 var modeLabels = map[string]string{"wifi_off": "Couper le Wi-Fi", "standby": "Mettre la box en veille"}
 
-var dayNames = []string{"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"}
+var standbyDays = []string{"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"}
 
 type modeChoice struct {
 	Value, Label string
@@ -78,12 +78,12 @@ func (c standbyConfig) grid() []planDay {
 	per := c.Resolution / 24
 	days := make([]planDay, 7)
 	for d := range days {
-		days[d].Name = dayNames[d]
+		days[d].Name = standbyDays[d]
 		for h := range 24 {
 			hour := planHour{Label: pad2(h)}
 			for k := range per {
 				i := d*c.Resolution + h*per + k
-				hour.Slots = append(hour.Slots, planSlot{Index: i, Name: dayNames[d] + " " + pad2(h) + ":" + pad2(k*60/per), On: c.Mapping[i]})
+				hour.Slots = append(hour.Slots, planSlot{Index: i, Name: standbyDays[d] + " " + pad2(h) + ":" + pad2(k*60/per), On: c.Mapping[i]})
 			}
 			days[d].Hours = append(days[d].Hours, hour)
 		}
