@@ -1,0 +1,125 @@
+{{define "title"}}Contacts · neofreebox{{end}}
+{{define "content"}}
+<h1>Contacts</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<p class="muted">{{len .Contacts}} contact{{if gt (len .Contacts) 1}}s{{end}} affiché{{if gt (len .Contacts) 1}}s{{end}} sur {{.Total}}.</p>
+<form method="get" action="/contacts" class="row">
+  <label class="grow">Rechercher<input type="search" name="q" value="{{.Q}}" placeholder="Nom, société, numéro, e-mail"></label>
+  <button class="ghost">Filtrer</button>
+</form>
+
+<section class="card section">
+  <details class="inline">
+    <summary class="ghost-btn">Ajouter un contact</summary>
+    <form method="post" action="/contacts/add" class="stack">
+      <div class="row">
+        <label class="grow">Prénom<input name="first_name" maxlength="64"></label>
+        <label class="grow">Nom<input name="last_name" maxlength="64"></label>
+        <label class="grow">Société<input name="company" maxlength="64"></label>
+      </div>
+      <div class="row">
+        <label class="grow">Nom affiché<input name="display_name" maxlength="64" placeholder="Prénom Nom par défaut"></label>
+        <label>Type de numéro<select name="type">{{range .NumberTypes}}<option>{{.}}</option>{{end}}</select></label>
+        <label class="grow">Numéro<input type="tel" name="number" maxlength="32"></label>
+      </div>
+      <label>Notes<textarea name="notes" rows="2" maxlength="500"></textarea></label>
+      <button>Ajouter</button>
+    </form>
+  </details>
+</section>
+
+<div class="card table-wrap section">
+{{if .Contacts}}
+<table class="stack-sm">
+  <thead><tr><th>Nom</th><th>Numéros</th><th>E-mails</th><th><span class="sr-only">Actions</span></th></tr></thead>
+  <tbody>
+  {{range .Contacts}}
+  <tr>
+    <td>{{.Name}}{{if .Company}} <span class="muted">{{.Company}}</span>{{end}}</td>
+    <td class="mono" data-label="Numéros">{{range .Numbers}}<div>{{.Number}} <span class="muted">{{.Type}}</span></div>{{end}}</td>
+    <td data-label="E-mails">{{range .Emails}}<div>{{.Email}}</div>{{end}}</td>
+    <td>
+      <details class="inline">
+        <summary class="ghost-btn">Modifier</summary>
+        <div class="stack">
+          <form method="post" action="/contacts/{{.ID}}/edit" class="stack">
+            <div class="row">
+              <label class="grow">Prénom<input name="first_name" value="{{.FirstName}}" maxlength="64"></label>
+              <label class="grow">Nom<input name="last_name" value="{{.LastName}}" maxlength="64"></label>
+              <label class="grow">Société<input name="company" value="{{.Company}}" maxlength="64"></label>
+            </div>
+            <label>Nom affiché<input name="display_name" value="{{.DisplayName}}" maxlength="64"></label>
+            <label>Notes<textarea name="notes" rows="2" maxlength="500">{{.Notes}}</textarea></label>
+            <button class="small">Enregistrer</button>
+          </form>
+
+          <h3>Numéros</h3>
+          {{$id := .ID}}
+          <ul class="tags">
+          {{range .Numbers}}<li class="mono">{{.Number}} ({{.Type}})
+            <form method="post" action="/contacts/{{$id}}/numbers/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+          </ul>
+          <form method="post" action="/contacts/{{$id}}/numbers/add" class="row">
+            <label>Type<select name="type">{{range $.NumberTypes}}<option>{{.}}</option>{{end}}</select></label>
+            <label class="grow">Numéro<input type="tel" name="number" required maxlength="32"></label>
+            <button class="small">Ajouter</button>
+          </form>
+
+          <h3>E-mails</h3>
+          <ul class="tags">
+          {{range .Emails}}<li>{{.Email}} ({{.Type}})
+            <form method="post" action="/contacts/{{$id}}/emails/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+          </ul>
+          <form method="post" action="/contacts/{{$id}}/emails/add" class="row">
+            <label>Type<select name="type">{{range $.HomeTypes}}<option>{{.}}</option>{{end}}</select></label>
+            <label class="grow">E-mail<input type="email" name="email" required maxlength="128"></label>
+            <button class="small">Ajouter</button>
+          </form>
+
+          <h3>Adresses</h3>
+          <ul class="tags">
+          {{range .Addresses}}<li>{{.Line}} ({{.Type}})
+            <form method="post" action="/contacts/{{$id}}/addresses/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+          </ul>
+          <form method="post" action="/contacts/{{$id}}/addresses/add" class="stack">
+            <div class="row">
+              <label>Type<select name="type">{{range $.HomeTypes}}<option>{{.}}</option>{{end}}</select></label>
+              <label>N°<input name="number" maxlength="16"></label>
+              <label class="grow">Rue<input name="street" maxlength="128"></label>
+            </div>
+            <div class="row">
+              <label class="grow">Complément<input name="street2" maxlength="128"></label>
+              <label>Code postal<input name="zipcode" maxlength="16"></label>
+              <label class="grow">Ville<input name="city" maxlength="64"></label>
+              <label class="grow">Pays<input name="country" maxlength="64"></label>
+            </div>
+            <button class="small">Ajouter l'adresse</button>
+          </form>
+
+          <h3>Sites web</h3>
+          <ul class="tags">
+          {{range .URLs}}<li>{{.URL}} ({{.Type}})
+            <form method="post" action="/contacts/{{$id}}/urls/{{.ID}}/delete"><button class="ghost small danger">Retirer</button></form></li>{{end}}
+          </ul>
+          <form method="post" action="/contacts/{{$id}}/urls/add" class="row">
+            <label>Type<select name="type">{{range $.URLTypes}}<option>{{.}}</option>{{end}}</select></label>
+            <label class="grow">Adresse<input type="url" name="url" required maxlength="256"></label>
+            <button class="small">Ajouter</button>
+          </form>
+
+          <h3>Suppression</h3>
+          <form method="post" action="/contacts/{{$id}}/delete" class="stack">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce contact et tout ce qui lui est rattaché seront effacés définitivement.</label>
+            <button class="small danger">Supprimer le contact</button>
+          </form>
+        </div>
+      </details>
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="empty">Aucun contact ne correspond.</p>{{end}}
+</div>
+{{end}}
+{{end}}

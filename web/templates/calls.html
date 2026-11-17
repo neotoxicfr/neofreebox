@@ -1,0 +1,85 @@
+{{define "title"}}Appels · neofreebox{{end}}
+{{define "content"}}
+<h1>Appels</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+  <section class="card">
+    <h2>Ligne</h2>
+    {{if .Phone}}<p>Numéro de l'abonnement : <span class="mono">{{.Phone}}</span></p>{{else}}<p class="muted">Numéro non communiqué par la box.</p>{{end}}
+    <p class="muted">{{.Unread}} appel{{if gt .Unread 1}}s{{end}} non lu{{if gt .Unread 1}}s{{end}}, {{.UnreadVM}} message{{if gt .UnreadVM 1}}s{{end}} vocal{{if gt .UnreadVM 1}}ux{{end}} non lu{{if gt .UnreadVM 1}}s{{end}}.</p>
+  </section>
+</div>
+
+<section class="card section">
+  <h2>Journal d'appels</h2>
+  <div class="actions">
+    {{if .Unread}}<form method="post" action="/calls/read-all"><button class="ghost small">Tout marquer comme lu</button></form>{{end}}
+    {{if .Calls}}
+    <details class="inline">
+      <summary class="ghost-btn danger">Tout supprimer</summary>
+      <form method="post" action="/calls/delete-all" class="stack">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le journal d'appels sera effacé définitivement.</label>
+        <button class="small danger">Vider le journal</button>
+      </form>
+    </details>
+    {{end}}
+  </div>
+  {{if .Calls}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Contact</th><th>Type</th><th>Date</th><th>Durée</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Calls}}
+    <tr>
+      <td>{{if .New}}<span class="badge on">nouveau</span> {{end}}{{.Who}}{{if and .Name .Number (ne .Name .Number)}} <span class="muted mono">{{.Number}}</span>{{end}}</td>
+      <td data-label="Type">{{.Label}}</td>
+      <td data-label="Date">{{date .Datetime}}</td>
+      <td data-label="Durée">{{since .Duration}}</td>
+      <td>
+        <div class="actions">
+          {{if .New}}<form method="post" action="/calls/{{.ID}}/read"><button class="ghost small">Marquer comme lu</button></form>{{end}}
+          <form method="post" action="/calls/{{.ID}}/delete"><button class="ghost small danger">Supprimer</button></form>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="empty">Aucun appel dans le journal.</p>{{end}}
+</section>
+
+<section class="card section">
+  <h2>Messagerie vocale</h2>
+  {{if .Voicemails}}
+  <div class="table-wrap">
+  <table class="stack-sm">
+    <thead><tr><th>Appelant</th><th>Date</th><th>Durée</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Voicemails}}
+    <tr>
+      <td>{{if not .Read}}<span class="badge on">nouveau</span> {{end}}<span class="mono">{{or .PhoneNumber "Numéro masqué"}}</span></td>
+      <td data-label="Date">{{date .Date}}</td>
+      <td data-label="Durée">{{since .Duration}}</td>
+      <td>
+        <div class="actions">
+          {{if not .Read}}<form method="post" action="/calls/voicemail/{{.ID}}/read"><button class="ghost small">Marquer comme lu</button></form>{{end}}
+          <details class="inline">
+            <summary class="ghost-btn danger">Supprimer</summary>
+            <form method="post" action="/calls/voicemail/{{.ID}}/delete" class="stack">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce message sera effacé définitivement.</label>
+              <button class="small danger">Supprimer le message</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <p class="hint">L'écoute des messages se fait pour l'instant depuis Freebox OS ou le téléphone de la box.</p>
+  {{else}}<p class="empty">Aucun message vocal.</p>{{end}}
+</section>
+{{end}}
+{{end}}
