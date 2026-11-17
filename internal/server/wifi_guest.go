@@ -131,7 +131,7 @@ func (s *Server) wifiGuestAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) wifiGuestDelete(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "id", "/wifi-guest")
+	id, ok := wifiID(w, r, "id", "/wifi-guest")
 	if !ok || !confirmed(w, r, "/wifi-guest") {
 		return
 	}

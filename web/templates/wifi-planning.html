@@ -8,7 +8,7 @@
     <label class="check"><input type="checkbox" name="use_planning" value="1"{{if .Plan.Use}} checked{{end}}> Utiliser le planning</label>
   </section>
   <section class="card table-wrap">
-    <table>
+    <table class="plan">
       <thead>
         <tr><th><span class="sr-only">Jour</span></th>{{range .Hours}}<th colspan="{{$.PerHour}}">{{.}}</th>{{end}}</tr>
       </thead>

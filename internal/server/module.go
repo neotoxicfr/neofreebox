@@ -120,7 +120,6 @@ func (s *Server) change(w http.ResponseWriter, r *http.Request, method, path str
 // confirmed reports whether a dangerous form was confirmed (a required
 // "confirm" checkbox). If not, it redirects back with an error.
 //
-//nolint:unused // used by the modules being added
 func confirmed(w http.ResponseWriter, r *http.Request, back string) bool {
 	if r.PostFormValue("confirm") == "1" {
 		return true
@@ -159,13 +158,11 @@ func takeFlash(w http.ResponseWriter, r *http.Request) *flash {
 
 // Form helpers: a missing or malformed value gives the zero value.
 
-//nolint:unused // used by the modules being added
 func formBool(r *http.Request, name string) bool {
 	v := r.PostFormValue(name)
 	return v == "1" || v == "on" || v == "true"
 }
 
-//nolint:unused // used by the modules being added
 func formInt(r *http.Request, name string) int {
 	n, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue(name)))
 	return n

@@ -458,8 +458,8 @@ func (s *Server) wifiTempDisable(w http.ResponseWriter, r *http.Request) {
 		"Les autres bandes sont coupées pour "+strconv.Itoa(minutes)+" min.", "/wifi")
 }
 
-// pathID reads a numeric path value, or redirects back with an error.
-func pathID(w http.ResponseWriter, r *http.Request, name, back string) (int, bool) {
+// wifiID reads a numeric path value, or redirects back with an error.
+func wifiID(w http.ResponseWriter, r *http.Request, name, back string) (int, bool) {
 	n, err := strconv.Atoi(r.PathValue(name))
 	if err != nil || n < 0 {
 		setFlash(w, "err:Identifiant invalide.")
@@ -470,7 +470,7 @@ func pathID(w http.ResponseWriter, r *http.Request, name, back string) (int, boo
 }
 
 func (s *Server) wifiAPEdit(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "id", "/wifi")
+	id, ok := wifiID(w, r, "id", "/wifi")
 	if !ok || !confirmed(w, r, "/wifi") {
 		return
 	}
@@ -491,7 +491,7 @@ func (s *Server) wifiAPEdit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) wifiAPRestart(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r, "id", "/wifi")
+	id, ok := wifiID(w, r, "id", "/wifi")
 	if !ok || !confirmed(w, r, "/wifi") {
 		return
 	}

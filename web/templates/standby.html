@@ -17,7 +17,7 @@
     </label>
     <p class="hint">Coche les créneaux pendant lesquels la box doit être coupée. Chaque colonne est une heure, découpée en {{.Cfg.PerHour}} case(s).</p>
     <div class="table-wrap">
-      <table>
+      <table class="plan">
         <thead><tr><th>Jour</th>{{range (index .Grid 0).Hours}}<th>{{.Label}}h</th>{{end}}</tr></thead>
         <tbody>
         {{range .Grid}}

@@ -32,15 +32,15 @@ type wifiPlan struct {
 	Mapping    []string `json:"mapping"`
 }
 
-type planSlot struct {
+type wifiSlot struct {
 	Index int
 	On    bool
 	Label string
 }
 
-type planDay struct {
+type wifiDay struct {
 	Name  string
-	Slots []planSlot
+	Slots []wifiSlot
 }
 
 // slotTime formats the start of a slot of the day as hh:mm.
@@ -52,7 +52,7 @@ func slotTime(slot, resolution int) string {
 func (s *Server) wifiPlanning(w http.ResponseWriter, r *http.Request) {
 	var p wifiPlan
 	err := s.fetch(r.Context(), "wifi/planning/", &p)
-	var days []planDay
+	var days []wifiDay
 	var hours []string
 	perHour := 1
 	if err == nil && p.Resolution >= 24 && p.Resolution%24 == 0 && len(p.Mapping) == 7*p.Resolution {
@@ -61,10 +61,10 @@ func (s *Server) wifiPlanning(w http.ResponseWriter, r *http.Request) {
 			hours = append(hours, strconv.Itoa(h)+" h")
 		}
 		for d, name := range wifiDays {
-			day := planDay{Name: name}
+			day := wifiDay{Name: name}
 			for i := range p.Resolution {
 				idx := d*p.Resolution + i
-				day.Slots = append(day.Slots, planSlot{Index: idx, On: p.Mapping[idx] == "on", Label: name + " " + slotTime(i, p.Resolution)})
+				day.Slots = append(day.Slots, wifiSlot{Index: idx, On: p.Mapping[idx] == "on", Label: name + " " + slotTime(i, p.Resolution)})
 			}
 			days = append(days, day)
 		}

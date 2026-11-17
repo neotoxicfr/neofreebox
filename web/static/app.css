@@ -126,3 +126,17 @@ details.inline form { margin-top: .5rem; }
   table.stack-sm td:first-child { font-weight: 600; justify-content: flex-start; text-align: left; }
   table.stack-sm .actions { justify-content: flex-start; width: 100%; }
 }
+
+/* Weekly planning grids (Wi-Fi, standby, downloads): compact cells. */
+table.plan { width: auto; font-size: .78rem; }
+table.plan th, table.plan td { padding: .15rem .2rem; text-align: center; border-bottom: 0; }
+table.plan th:first-child, table.plan td:first-child { text-align: left; padding-right: .6rem; white-space: nowrap; }
+table.plan input[type="checkbox"] { width: 1rem; height: 1rem; min-height: 0; margin: 0; }
+
+h3 { font-size: .95rem; margin: 1rem 0 .5rem; }
+pre.code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; overflow: auto; max-height: 24rem; font-size: .8rem; }
+progress { width: 100%; max-width: 12rem; height: .5rem; accent-color: var(--accent); }
+a.ghost-btn { text-decoration: none; }
+a.ghost-btn[aria-current="page"] { color: var(--text); border-color: var(--accent); }
+summary.ghost-btn.danger, .ghost-btn.danger { color: var(--err); border-color: var(--err); }
+audio { height: 36px; max-width: 220px; }
