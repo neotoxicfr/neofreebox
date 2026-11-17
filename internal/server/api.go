@@ -251,7 +251,7 @@ func (s *Server) mcpHandler() http.Handler {
 			"Read-only tools are safe. Tools marked dangerous can cut the network or lose data: explain the effect to the user and only call them with confirm=true once they agreed.",
 	})
 	for _, op := range ops.All() {
-		ro := op.ReadOnly()
+		ro := op.ReadOnly() && !op.Secret // a client must not auto-approve reading a secret
 		destructive := !ro // the MCP default is true: say false only when nothing changes
 		srv.AddTool(&mcp.Tool{
 			Name:        op.Name,
