@@ -40,6 +40,7 @@ Environment:
   NEOFREEBOX_DATA_DIR        where the account is kept (default ./data)
   NEOFREEBOX_BOX_URL         box URL (default ` + fbx.DefaultURL + `)
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
+  NEOFREEBOX_READ_ONLY       1 to refuse every write to the box (demos, audits)
 `
 
 func main() {
@@ -158,7 +159,12 @@ func serve(ctx context.Context) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	server.Version = version
-	s, err := server.New(c, dir, log)
+	var box server.Box = c
+	if os.Getenv("NEOFREEBOX_READ_ONLY") == "1" {
+		box = readOnly{c}
+		log.Warn("read-only mode: no write is sent to the box")
+	}
+	s, err := server.New(box, dir, log)
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
@@ -224,6 +230,17 @@ func healthcheck(ctx context.Context) error {
 		return fmt.Errorf("healthz: %s", resp.Status)
 	}
 	return nil
+}
+
+// readOnly lets reads through and refuses every write, for demos, tests and
+// audits against a real box. rrd/ is read with a POST, so it passes.
+type readOnly struct{ *fbx.Client }
+
+func (b readOnly) Do(ctx context.Context, method, path string, in, out any) error {
+	if method == http.MethodGet || (method == http.MethodPost && strings.HasPrefix(path, "rrd/")) {
+		return b.Client.Do(ctx, method, path, in, out)
+	}
+	return &fbx.Error{Status: http.StatusForbidden, Code: "read_only", Msg: "mode lecture seule : rien n'est envoyé à la box"}
 }
 
 func envOr(key, def string) string {
