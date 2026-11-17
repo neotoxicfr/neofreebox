@@ -1,0 +1,78 @@
+{{define "title"}}Filtre MAC · neofreebox{{end}}
+{{define "content"}}
+<h1>Filtre MAC</h1>
+{{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
+<div class="grid">
+  <section class="card">
+    <h2>Mode</h2>
+    <p class="big"><span class="badge {{if .Active}}on{{else}}off{{end}}">{{.Cfg.FilterLabel}}</span></p>
+    <form method="post" action="/wifi-filter/state" class="stack">
+      <label>Changer le mode
+        <select name="mac_filter_state">
+          <option value="disabled"{{if eq .Cfg.MACFilter "disabled"}} selected{{end}}>Désactivé</option>
+          <option value="whitelist"{{if eq .Cfg.MACFilter "whitelist"}} selected{{end}}>Liste blanche : seuls les appareils listés</option>
+          <option value="blacklist"{{if eq .Cfg.MACFilter "blacklist"}} selected{{end}}>Liste noire : tous sauf les appareils listés</option>
+        </select>
+      </label>
+      <p class="hint">{{.Whitelisted}} appareil(s) en liste blanche. Le WPS ne marche pas avec un filtre actif.</p>
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que les appareils refusés, le mien compris, seront déconnectés. (Pas besoin pour désactiver.)</label>
+      <button class="danger">Enregistrer le mode</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Ajouter une adresse</h2>
+    <form method="post" action="/wifi-filter/entries" class="stack">
+      <label>Adresse MAC<input name="mac" class="mono" required pattern="[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}" placeholder="00:11:22:33:44:55"><span class="hint">Retrouve-la dans <a href="/devices">Appareils</a>.</span></label>
+      <label>Liste
+        <select name="type"><option value="whitelist">Blanche (autorisé)</option><option value="blacklist">Noire (refusé)</option></select>
+      </label>
+      <label>Commentaire<input name="comment" maxlength="64"></label>
+      {{if .Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif et peut déconnecter des appareils.</label>{{end}}
+      <button>Ajouter</button>
+    </form>
+  </section>
+</div>
+
+<section class="card table-wrap section">
+  <h2>Adresses</h2>
+  {{if .Entries}}
+  <table class="stack-sm">
+    <thead><tr><th>MAC</th><th>Liste</th><th>Appareil</th><th>Commentaire</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Entries}}
+    <tr>
+      <td class="mono">{{.MAC}}</td>
+      <td data-label="Liste"><span class="badge {{if .Allowed}}on{{else}}off{{end}}">{{if .Allowed}}blanche{{else}}noire{{end}}</span></td>
+      <td data-label="Appareil">{{if ne .Hostname .MAC}}{{.Hostname}}{{end}}</td>
+      <td data-label="Commentaire">{{.Comment}}</td>
+      <td>
+        <div class="actions">
+          <details class="inline">
+            <summary class="ghost-btn">Modifier</summary>
+            <form method="post" action="/wifi-filter/entries/{{.ID}}" class="stack">
+              <label>Liste
+                <select name="type"><option value="whitelist"{{if .Allowed}} selected{{end}}>Blanche</option><option value="blacklist"{{if not .Allowed}} selected{{end}}>Noire</option></select>
+              </label>
+              <label>Commentaire<input name="comment" value="{{.Comment}}" maxlength="64"></label>
+              {{if $.Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif.</label>{{end}}
+              <button class="small">Enregistrer</button>
+            </form>
+          </details>
+          <details class="inline">
+            <summary class="ghost-btn">Supprimer</summary>
+            <form method="post" action="/wifi-filter/entries/{{.ID}}/delete" class="stack">
+              {{if $.Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif et peut changer qui se connecte.</label>{{end}}
+              <button class="small danger">Supprimer</button>
+            </form>
+          </details>
+        </div>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">Aucune adresse dans le filtre.</p>{{end}}
+</section>
+{{end}}
+{{end}}
