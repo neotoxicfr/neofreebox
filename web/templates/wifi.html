@@ -7,7 +7,7 @@
 <div class="grid">
   <section class="card">
     <h2>Wi-Fi</h2>
-    <p class="big"><span class="badge {{if .State.On}}on{{else}}off{{end}}">{{if .State.State}}{{.State.Label}}{{else if .Cfg.Enabled}}Wi-Fi actif{{else}}Wi-Fi coupé{{end}}</span></p>
+    <p class="big"><span class="badge{{if .Cfg.Enabled}} on{{end}}">{{if .State.State}}{{.State.Label}}{{else if .Cfg.Enabled}}activé{{else}}désactivé{{end}}</span></p>
     {{if .Cfg.Enabled}}
     <form method="post" action="/wifi/enabled" class="stack">
       <input type="hidden" name="enabled" value="0">
@@ -31,7 +31,7 @@
     </form>
     {{if .HasSteering}}
     <form method="post" action="/wifi/steering" class="stack section">
-      <label>Répartition des appareils entre les bandes
+      <label>Répartition des appareils entre les bandes<span class="hint">Aussi appelée « band steering » : la box pousse les appareils vers la bande la plus adaptée.</span>
         <select name="steering_level">
           <option value="0"{{if eq .Steering 0}} selected{{end}}>Désactivée</option>
           <option value="1"{{if eq .Steering 1}} selected{{end}}>Quand l'appareil accepte</option>
@@ -69,25 +69,26 @@
   {{if .APs}}
   {{range .APs}}
   <div class="section">
-    <p><strong>{{.Name}}</strong> <span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StateLabel}}</span>
-      <span class="muted">· canal {{.Channel}} · {{.Status.ChannelWidth}} MHz · réglé sur {{.Wanted}}, {{.Config.ChannelWidth}} MHz{{if .Config.DFS}} · DFS{{end}}</span></p>
+    <p><strong>{{band .Config.Band}}</strong> <span class="badge{{with .Badge}} {{.}}{{end}}">{{.StateLabel}}</span>
+      <span class="muted">· canal {{.Channel}} · {{.Status.ChannelWidth}} MHz · réglé sur {{.Wanted}}, {{.Config.ChannelWidth}} MHz{{if .Config.DFS}} · canaux radar (DFS) autorisés{{end}}</span></p>
     <div class="actions">
       <details class="inline">
-        <summary class="ghost-btn">Modifier</summary>
+        <summary class="ghost-btn">Modifier<span class="sr-only"> la radio {{band .Config.Band}}</span></summary>
         <form method="post" action="/wifi/ap/{{.ID}}" class="stack">
           <div class="row">
             <label>Largeur<select name="channel_width">{{range .WidthOptions}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
             <label>Canal principal<input type="number" name="primary_channel" value="{{.Config.Primary}}" min="0" max="233"><span class="hint">0 = automatique</span></label>
             <label>Canal secondaire<input type="number" name="secondary_channel" value="{{.Config.Secondary}}" min="0" max="233"><span class="hint">0 = automatique</span></label>
           </div>
-          <label class="check"><input type="checkbox" name="dfs_enabled" value="1"{{if .Config.DFS}} checked{{end}}> Autoriser les canaux DFS</label>
+          <label class="check"><input type="checkbox" name="dfs_enabled" value="1"{{if .Config.DFS}} checked{{end}}> Autoriser les canaux partagés avec les radars (DFS)</label>
+          <p class="hint">DFS : plus de canaux libres en 5 GHz, mais la radio peut changer de canal quand un radar est détecté.</p>
           <p class="hint">Les combinaisons permises sont listées dans <a href="/wifi-radar?ap={{.ID}}">Voisinage</a>.</p>
           <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande peuvent être déconnectés.</label>
           <button class="small danger">Enregistrer</button>
         </form>
       </details>
       <details class="inline">
-        <summary class="ghost-btn">Redémarrer</summary>
+        <summary class="ghost-btn">Redémarrer<span class="sr-only"> la radio {{band .Config.Band}}</span></summary>
         <form method="post" action="/wifi/ap/{{.ID}}/restart" class="stack">
           <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande seront déconnectés un moment.</label>
           <button class="small danger">Redémarrer la radio</button>
@@ -103,23 +104,23 @@
   <h2>Réseaux</h2>
   {{if .BSSs}}
   <table class="stack-sm">
-    <thead><tr><th>Nom (SSID)</th><th>Bande</th><th>Sécurité</th><th>Appareils</th><th>Visibilité</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom (SSID)</th><th scope="col">Bande</th><th scope="col">Sécurité</th><th scope="col">Appareils</th><th scope="col">Visibilité</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .BSSs}}
     <tr>
-      <td><span class="badge {{if .Active}}on{{else}}off{{end}}">{{.StateLabel}}</span> {{.Config.SSID}}</td>
-      <td data-label="Bande">{{.AP}}</td>
+      <td><span class="badge{{with .Badge}} {{.}}{{end}}">{{.StateLabel}}</span> {{.Config.SSID}}</td>
+      <td data-label="Bande">{{band .Band}}</td>
       <td data-label="Sécurité">{{.EncLabel}}</td>
       <td data-label="Appareils">{{.Status.Stations}}</td>
       <td data-label="Visibilité">{{if .Config.HideSSID}}masqué{{else}}visible{{end}}</td>
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Clé</summary>
+            <summary class="ghost-btn">Clé<span class="sr-only"> de {{.Config.SSID}}</span></summary>
             {{if .KeyHidden}}<p class="muted">La box ne donne pas la clé à cette application.</p>{{else}}<p><code class="select">{{.Config.Key}}</code></p>{{end}}
           </details>
           <details class="inline">
-            <summary class="ghost-btn">Modifier</summary>
+            <summary class="ghost-btn">Modifier<span class="sr-only"> {{.Config.SSID}}</span></summary>
             <form method="post" action="/wifi/bss/{{.ID}}" class="stack">
               <label>Nom (SSID)<input name="ssid" value="{{.Config.SSID}}" required maxlength="32"></label>
               <label>Sécurité<select name="encryption">{{range .EncOptions}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
@@ -145,17 +146,17 @@
   <h2>Diagnostic</h2>
   <p class="hint">Réglages que la box juge perfectibles. Le correctif applique ses valeurs recommandées.</p>
   <table class="stack-sm">
-    <thead><tr><th>Élément</th><th>Problème</th><th>Gravité</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Problème</th><th scope="col">Gravité</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Diag}}
     <tr>
       <td class="mono">{{.Target}}</td>
       <td data-label="Problème">{{.Label}}</td>
-      <td data-label="Gravité"><span class="badge {{if .Major}}off{{end}}">{{if .Major}}majeur{{else}}mineur{{end}}</span></td>
+      <td data-label="Gravité"><span class="badge{{if .Major}} warn{{end}}">{{if .Major}}majeur{{else}}mineur{{end}}</span></td>
       <td>
         <div class="actions">
           <details class="inline">
-            <summary class="ghost-btn">Corriger</summary>
+            <summary class="ghost-btn">Corriger<span class="sr-only"> : {{.Target}}, {{.Label}}</span></summary>
             <form method="post" action="/wifi/diag/fix" class="stack">
               <input type="hidden" name="target" value="{{.Ref}}"><input type="hidden" name="code" value="{{.Code}}">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage change et peut déconnecter des appareils.</label>
@@ -175,7 +176,7 @@
   <h2>Réinitialiser le Wi-Fi</h2>
   <p class="hint">Remet noms, clés, canaux et sécurité aux valeurs d'usine. Tous les appareils devront se reconnecter avec la clé par défaut.</p>
   <details class="inline">
-    <summary class="ghost-btn danger">Réinitialiser…</summary>
+    <summary class="ghost-btn danger">Réinitialiser le Wi-Fi…</summary>
     <form method="post" action="/wifi/reset" class="stack">
       <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le Wi-Fi revient aux réglages d'usine et que tous les appareils seront déconnectés.</label>
       <button class="danger">Remettre le Wi-Fi par défaut</button>

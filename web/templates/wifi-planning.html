@@ -10,7 +10,7 @@
   <section class="card table-wrap">
     <table class="plan">
       <thead>
-        <tr><th><span class="sr-only">Jour</span></th>{{range .Hours}}<th colspan="{{$.PerHour}}">{{.}}</th>{{end}}</tr>
+        <tr><th scope="col"><span class="sr-only">Jour</span></th>{{range .Hours}}<th scope="col" colspan="{{$.PerHour}}">{{.}}</th>{{end}}</tr>
       </thead>
       <tbody>
       {{range .Days}}
