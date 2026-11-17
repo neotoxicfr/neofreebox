@@ -135,34 +135,22 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any) error
 // call sends one request; session may be empty for the unauthenticated
 // login endpoints.
 func (c *Client) call(ctx context.Context, method, path, session string, in, out any) error {
-	if !safePath(path) {
-		return fmt.Errorf("fbx: refusing path %q", Redact(path))
-	}
 	var body io.Reader
-	if in != nil {
+	ctype := ""
+	switch v := in.(type) {
+	case nil:
+	case url.Values: // the few endpoints that want a form (downloads/add)
+		body, ctype = strings.NewReader(v.Encode()), "application/x-www-form-urlencoded"
+	default:
 		b, err := json.Marshal(in)
 		if err != nil {
 			return fmt.Errorf("fbx: encode %s: %w", Redact(path), err)
 		}
-		body = bytes.NewReader(b)
+		body, ctype = bytes.NewReader(b), "application/json"
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.base+"/"+strings.TrimLeft(path, "/"), body)
+	resp, err := c.send(ctx, method, path, session, body, ctype)
 	if err != nil {
-		return fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
-	}
-	if in != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	if session != "" {
-		req.Header.Set("X-Fbx-App-Auth", session)
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err // the URL it carries holds the identifiers
-		}
-		return fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
+		return err
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
@@ -182,6 +170,67 @@ func (c *Client) call(ctx context.Context, method, path, session string, in, out
 		}
 	}
 	return nil
+}
+
+// send performs one request and returns the response, whatever its status.
+func (c *Client) send(ctx context.Context, method, path, session string, body io.Reader, ctype string) (*http.Response, error) {
+	if !safePath(path) {
+		return nil, fmt.Errorf("fbx: refusing path %q", Redact(path))
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.base+"/"+strings.TrimLeft(path, "/"), body)
+	if err != nil {
+		return nil, fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
+	}
+	if ctype != "" {
+		req.Header.Set("Content-Type", ctype)
+	}
+	if session != "" {
+		req.Header.Set("X-Fbx-App-Auth", session)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		var uerr *url.Error
+		if errors.As(err, &uerr) {
+			err = uerr.Err // the URL it carries holds the identifiers
+		}
+		return nil, fmt.Errorf("fbx: %s %s: %w", method, Redact(path), err)
+	}
+	return resp, nil
+}
+
+// Raw sends an authenticated GET for an endpoint that answers raw bytes
+// (dl/ file downloads, voicemail audio) and returns the response for the
+// caller to stream and close. A JSON answer is an error from the box.
+func (c *Client) Raw(ctx context.Context, path string) (*http.Response, error) {
+	for attempt := 0; ; attempt++ {
+		sess, err := c.ensureSession(ctx)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.send(ctx, http.MethodGet, path, sess, nil, "")
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == http.StatusOK && !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+			return resp, nil
+		}
+		var env envelope
+		_ = json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&env)
+		resp.Body.Close()
+		if env.ErrorCode == "auth_required" && attempt == 0 {
+			c.mu.Lock()
+			if c.session == sess {
+				c.session = ""
+			}
+			c.mu.Unlock()
+			continue
+		}
+		code := env.ErrorCode
+		if code == "" {
+			code = "bad_response"
+		}
+		return nil, &Error{Status: resp.StatusCode, Code: code, Msg: env.Msg}
+	}
 }
 
 // safePath rejects dot segments, so an argument spliced into a path can

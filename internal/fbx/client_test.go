@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync/atomic"
 	"testing"
 )
@@ -51,6 +53,21 @@ func (f *fakeBox) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		reply(200, map[string]any{"success": true, "result": map[string]any{"model_info": map[string]string{"name": "fbxgw8-r1"}}})
+	case "/api/v16/dl/Zm9v":
+		cur, _ := f.current.Load().(string)
+		if r.Header.Get("X-Fbx-App-Auth") != cur {
+			reply(403, map[string]any{"success": false, "error_code": "auth_required"})
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		_, _ = w.Write([]byte("file bytes"))
+	case "/api/v16/downloads/add/":
+		_ = r.ParseForm()
+		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" || r.PostFormValue("download_url") != "magnet:?x" {
+			reply(400, map[string]any{"success": false, "error_code": "invalid_request"})
+			return
+		}
+		reply(200, map[string]any{"success": true, "result": map[string]any{"id": 7}})
 	default:
 		reply(404, map[string]any{"success": false, "error_code": "invalid_request", "msg": "Requête invalide"})
 	}
@@ -163,5 +180,26 @@ func TestSafePath(t *testing.T) {
 		if safePath(path) != ok {
 			t.Errorf("safePath(%q) = %v, want %v", path, !ok, ok)
 		}
+	}
+}
+
+func TestRawAndForm(t *testing.T) {
+	f := &fakeBox{token: "secret"}
+	c := newTestClient(t, f, "secret")
+	resp, err := c.Raw(context.Background(), "dl/Zm9v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if string(b) != "file bytes" {
+		t.Fatalf("raw = %q", b)
+	}
+	if _, err := c.Raw(context.Background(), "nope/"); !IsCode(err, "invalid_request") {
+		t.Fatalf("raw error = %v", err)
+	}
+	var out struct{ ID int }
+	if err := c.Do(context.Background(), http.MethodPost, "downloads/add/", url.Values{"download_url": {"magnet:?x"}}, &out); err != nil || out.ID != 7 {
+		t.Fatalf("form = %v, %v", out, err)
 	}
 }

@@ -63,6 +63,13 @@ func (b *downloadsBox) Do(ctx context.Context, method, path string, in, out any)
 		return b.Get(ctx, path, out)
 	}
 	w := dlWrite{Method: method, Path: path}
+	if form, ok := in.(url.Values); ok { // form bodies: flatten to compare like JSON ones
+		flat := map[string]any{}
+		for k := range form {
+			flat[k] = form.Get(k)
+		}
+		in = flat
+	}
 	if in != nil {
 		raw, _ := json.Marshal(in)
 		_ = json.Unmarshal(raw, &w.Body)

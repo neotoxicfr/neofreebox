@@ -10,12 +10,13 @@ import (
 // Calls: the call log, the phone account and the voicemail. Phone numbers
 // are personal data: they are shown but never logged (only ids go in paths).
 //
-// The voicemail audio file (call/voicemail/{id}/audio_file) is binary WAV;
-// the box client only decodes JSON, so it is neither a page nor an operation.
+// The voicemail audio file (call/voicemail/{id}/audio_file) is played
+// through voicemailAudio; it is bytes, so it is not an API operation.
 
 func init() {
 	register(module{Slug: "calls", Title: "Appels", Group: "Téléphonie", Order: 0, Routes: func(s *Server, mux *http.ServeMux) {
 		s.page(mux, "GET /calls", s.calls)
+		s.page(mux, "GET /calls/voicemail/{id}/audio", s.voicemailAudio)
 		s.page(mux, "POST /calls/read-all", s.callsReadAll)
 		s.page(mux, "POST /calls/delete-all", s.callsDeleteAll)
 		s.page(mux, "POST /calls/{id}/read", s.callRead)
@@ -148,4 +149,10 @@ func (s *Server) voicemailDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.change(w, r, http.MethodDelete, "call/voicemail/"+url.PathEscape(r.PathValue("id"))+"/", nil, "Message supprimé.", "/calls")
+}
+
+// voicemailAudio plays a voicemail message in the browser.
+func (s *Server) voicemailAudio(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	s.stream(w, r, "call/voicemail/"+url.PathEscape(id)+"/audio_file", "message.wav", false, "/calls")
 }

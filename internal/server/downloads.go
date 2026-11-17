@@ -497,17 +497,18 @@ func (s *Server) downloadAdd(w http.ResponseWriter, r *http.Request) {
 		bounce(w, r, "/downloads", "Indique au moins une adresse.")
 		return
 	}
-	body := map[string]any{}
+	// The box wants this one as a form, not JSON.
+	body := url.Values{}
 	if len(urls) == 1 {
-		body["download_url"] = urls[0]
+		body.Set("download_url", urls[0])
 	} else {
-		body["download_url_list"] = strings.Join(urls, "\n")
+		body.Set("download_url_list", strings.Join(urls, "\n"))
 	}
 	if dir := formStr(r, "dir"); dir != "" {
-		body["download_dir"] = encodePath(dir)
+		body.Set("download_dir", encodePath(dir))
 	}
 	if formBool(r, "recursive") {
-		body["recursive"] = true
+		body.Set("recursive", "true")
 	}
 	s.change(w, r, http.MethodPost, "downloads/add", body, "Téléchargement ajouté.", "/downloads")
 }

@@ -16,8 +16,8 @@ import (
 // Files: browse the box's disks (fs/ls), manage files through fs tasks and
 // share links. Paths travel base64-encoded, as the box returns them.
 //
-// Not covered by the page: downloading (dl/ returns raw bytes, but the Box
-// interface only decodes JSON envelopes) and uploading (WebSocket only).
+// Files download through fileDownload (dl/, streamed). Not covered:
+// uploading, which the box only offers over WebSocket.
 
 func init() {
 	register(module{Slug: "files", Title: "Fichiers", Group: "Contenus", Order: 10, Routes: func(s *Server, mux *http.ServeMux) {
@@ -28,6 +28,7 @@ func init() {
 		s.page(mux, "POST /files/copy", s.fileCopy)
 		s.page(mux, "POST /files/archive", s.fileArchive)
 		s.page(mux, "POST /files/delete", s.fileDelete)
+		s.page(mux, "GET /files/dl", s.fileDownload)
 		s.page(mux, "POST /files/share", s.shareCreate)
 		s.page(mux, "POST /files/share/{token}/delete", s.shareDelete)
 		s.page(mux, "POST /files/tasks/{id}/delete", s.taskDelete)
@@ -317,4 +318,15 @@ func (s *Server) taskDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.change(w, r, http.MethodDelete, "fs/tasks/"+strconv.Itoa(id), nil, "Tâche retirée.", backTo(r))
+}
+
+// fileDownload streams a file of the box to the browser (dl/ endpoint).
+func (s *Server) fileDownload(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Query().Get("p")
+	name, err := base64.StdEncoding.DecodeString(p)
+	if err != nil || p == "" {
+		http.Error(w, "Chemin invalide", http.StatusBadRequest)
+		return
+	}
+	s.stream(w, r, "dl/"+p, path.Base(string(name)), true, "/files")
 }

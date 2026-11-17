@@ -18,7 +18,7 @@
   {{range .Entries}}
   <tr>
     <td><label class="check"><input type="checkbox" name="files" value="{{.Path}}" form="sel" aria-label="Sélectionner {{.Name}}">
-      {{if .IsDir}}<a href="/files?p={{.Path}}">{{.Name}}/</a>{{else}}{{.Name}}{{end}}</label></td>
+      {{if .IsDir}}<a href="/files?p={{.Path}}">{{.Name}}/</a>{{else}}<a href="/files/dl?p={{.Path}}" download>{{.Name}}</a>{{end}}</label></td>
     <td data-label="Taille">{{if not .IsDir}}{{bytes .Size}}{{end}}</td>
     <td data-label="Modifié">{{date .Modification}}</td>
     <td>

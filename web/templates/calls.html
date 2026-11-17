@@ -63,6 +63,7 @@
       <td data-label="Durée">{{since .Duration}}</td>
       <td>
         <div class="actions">
+          <audio controls preload="none" src="/calls/voicemail/{{.ID}}/audio"></audio>
           {{if not .Read}}<form method="post" action="/calls/voicemail/{{.ID}}/read"><button class="ghost small">Marquer comme lu</button></form>{{end}}
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer</summary>
@@ -78,7 +79,6 @@
     </tbody>
   </table>
   </div>
-  <p class="hint">L'écoute des messages se fait pour l'instant depuis Freebox OS ou le téléphone de la box.</p>
   {{else}}<p class="empty">Aucun message vocal.</p>{{end}}
 </section>
 {{end}}

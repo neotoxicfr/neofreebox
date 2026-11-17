@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/neotoxicfr/neofreebox/internal/fbx"
+	"io"
+	"mime"
 	"net/http"
 	"sort"
 	"strconv"
@@ -171,4 +173,45 @@ func formInt(r *http.Request, name string) int {
 
 func formStr(r *http.Request, name string) string {
 	return strings.TrimSpace(r.PostFormValue(name))
+}
+
+// rawBox is implemented by the real client: endpoints that answer bytes.
+type rawBox interface {
+	Raw(ctx context.Context, path string) (*http.Response, error)
+}
+
+// stream sends the bytes of a box endpoint to the browser, without holding
+// them in memory. attachment forces a download named filename; otherwise
+// the browser may show it (audio). Errors become a flash on back.
+func (s *Server) stream(w http.ResponseWriter, r *http.Request, path, filename string, attachment bool, back string) {
+	rb, ok := s.box.(rawBox)
+	if !ok {
+		http.Error(w, "Indisponible", http.StatusNotImplemented)
+		return
+	}
+	resp, err := rb.Raw(r.Context(), path)
+	if err != nil {
+		s.log.Error("stream", "path", fbx.Redact(path), "err", err)
+		setFlash(w, "err:"+err.Error())
+		http.Redirect(w, r, back, http.StatusSeeOther)
+		return
+	}
+	defer resp.Body.Close()
+	h := w.Header()
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" || strings.Contains(ct, "html") || strings.Contains(ct, "xml") || strings.Contains(ct, "javascript") {
+		ct = "application/octet-stream" // never let the box's bytes run as a page
+	}
+	h.Set("Content-Type", ct)
+	if n := resp.Header.Get("Content-Length"); n != "" {
+		h.Set("Content-Length", n)
+	}
+	h.Set("Cache-Control", "no-store")
+	h.Set("Content-Security-Policy", "default-src 'none'; media-src 'self'; sandbox")
+	disp := "inline"
+	if attachment {
+		disp = "attachment"
+	}
+	h.Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": filename}))
+	_, _ = io.Copy(w, resp.Body)
 }
