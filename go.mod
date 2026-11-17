@@ -6,6 +6,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	golang.org/x/crypto v0.59.0
 	golang.org/x/sync v0.25.0
+	rsc.io/qr v0.2.0
 )
 
 require (
