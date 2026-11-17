@@ -38,8 +38,8 @@ func init() {
 		ops.Op{Name: "storage_partition_get", Description: "Get one partition.", Path: "storage/partition/{id}", Params: id("Partition id")},
 		ops.Op{Name: "storage_partition_update", Description: "Mount or unmount a partition.", Method: http.MethodPut,
 			Path: "storage/partition/{id}", Params: id("Partition id"), Body: true, BodyHelp: `{"state": "umounted"}`, Dangerous: true},
-		ops.Op{Name: "storage_partition_check", Description: "Check a partition's file system (ro = read only, rw = try to repair); follow it with operation_pct on the partition.", Method: http.MethodPut,
-			Path: "storage/partition/{id}/check/", Params: id("Partition id"), Body: true, BodyHelp: `{"checkmode": "ro"}`},
+		ops.Op{Name: "storage_partition_check", Description: "Check a partition's file system (ro = read only, rw = try to repair: the partition is unmounted meanwhile); follow it with operation_pct on the partition.", Method: http.MethodPut,
+			Path: "storage/partition/{id}/check/", Params: id("Partition id"), Body: true, BodyHelp: `{"checkmode": "ro"}`, Dangerous: true},
 		ops.Op{Name: "storage_config_get", Description: "Get the external disk power management settings (external_pm_enabled, external_pm_idle_before_spindown in minutes).",
 			Path: "storage/config/"},
 		ops.Op{Name: "storage_config_update", Description: "Change the external disk power management settings.", Method: http.MethodPut,
@@ -79,6 +79,44 @@ type partition struct {
 	} `json:"operation_pct"`
 }
 
+// StateLabel is the partition state in French.
+func (p partition) StateLabel() string {
+	return label(p.State, map[string]string{"mounted": "montée", "umounted": "démontée", "checking": "vérification en cours",
+		"formatting": "formatage en cours", "mounting": "montage en cours", "umounting": "démontage en cours", "ejecting": "éjection en cours",
+		"error": "erreur"})
+}
+
+// FsckLabel is the last check result in French.
+func (p partition) FsckLabel() string {
+	return label(p.FsckResult, map[string]string{"fs_clean": "aucune erreur", "clean": "aucune erreur", "fs_corrected": "erreurs corrigées",
+		"corrected": "erreurs corrigées", "fs_uncorrected": "erreurs non corrigées", "uncorrected": "erreurs non corrigées",
+		"no_run_yet": "jamais vérifiée"})
+}
+
+// label translates a raw state, keeping the raw value visible when unknown.
+func label(raw string, names map[string]string) string {
+	if l, ok := names[raw]; ok {
+		return l
+	}
+	if raw == "" {
+		return ""
+	}
+	return "inconnu (" + raw + ")"
+}
+
+// Badge is the badge modifier of the state: on, warn, off or none.
+func (p partition) Badge() string {
+	switch {
+	case p.State == "mounted":
+		return " on"
+	case p.State == "error":
+		return " off"
+	case p.Busy():
+		return " warn"
+	}
+	return ""
+}
+
 // UsedPct is the used share of the partition, 0 to 100.
 func (p partition) UsedPct() int {
 	if p.TotalBytes <= 0 {
@@ -115,11 +153,70 @@ type disk struct {
 	} `json:"operation_pct"`
 }
 
+// StateLabel is the disk state in French.
+func (d disk) StateLabel() string {
+	return label(d.State, map[string]string{"enabled": "activé", "disabled": "désactivé (éjecté)", "formatting": "formatage en cours",
+		"error": "erreur"})
+}
+
+// Badge is the badge modifier of the state: on, warn, off or none.
+func (d disk) Badge() string {
+	switch d.State {
+	case "enabled":
+		return " on"
+	case "error":
+		return " off"
+	case "formatting":
+		return " warn"
+	}
+	return ""
+}
+
+// TypeLabel is the disk type in French.
+func (d disk) TypeLabel() string {
+	return label(d.Type, map[string]string{"internal": "interne", "usb": "USB", "sata": "SATA", "nvme": "NVMe", "raid": "RAID"})
+}
+
 // Internal disks cannot be formatted nor ejected from here.
 func (d disk) Internal() bool { return d.Type == "internal" }
 
 // Errors says whether the disk reported failed requests, a sign of failure.
 func (d disk) Errors() bool { return d.ReadErrors > 0 || d.WriteErrors > 0 }
+
+// StateLabel is the array state in French.
+func (a raidArray) StateLabel() string {
+	l := label(a.State, map[string]string{"running": "en marche", "stopped": "arrêté", "starting": "démarrage en cours",
+		"stopping": "arrêt en cours", "error": "erreur", "creating": "création en cours"})
+	if a.Degraded {
+		l += ", dégradé"
+	}
+	return l
+}
+
+// Badge is the badge modifier of the state: on, warn, off or none.
+func (a raidArray) Badge() string {
+	switch {
+	case a.State == "error":
+		return " off"
+	case a.Degraded || a.State == "starting" || a.State == "stopping" || a.State == "creating":
+		return " warn"
+	case a.State == "running":
+		return " on"
+	}
+	return ""
+}
+
+// SyncLabel is the running synchronisation in French.
+func (a raidArray) SyncLabel() string {
+	return label(a.SyncAction, map[string]string{"resync": "synchronisation", "recover": "reconstruction", "check": "vérification",
+		"repair": "réparation", "reshape": "réorganisation", "frozen": "suspendue"})
+}
+
+// RoleLabel is the member's role in French.
+func (m raidMember) RoleLabel() string {
+	return label(m.Role, map[string]string{"member": "membre", "spare": "de secours", "faulty": "défaillant", "missing": "manquant",
+		"sync": "en synchronisation"})
+}
 
 type raidMember struct {
 	ID   int    `json:"id"`
@@ -252,6 +349,10 @@ func (s *Server) partitionCheck(w http.ResponseWriter, r *http.Request) {
 	mode := formStr(r, "checkmode")
 	if mode != "ro" && mode != "rw" {
 		mode = "ro"
+	}
+	// Repairing unmounts the partition: services that use it stop.
+	if mode == "rw" && !confirmed(w, r, "/storage") {
+		return
 	}
 	s.change(w, r, http.MethodPut, "storage/partition/"+strconv.Itoa(id)+"/check/", map[string]string{"checkmode": mode},
 		"Vérification lancée.", "/storage")

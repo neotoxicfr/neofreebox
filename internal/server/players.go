@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
 
@@ -35,7 +37,7 @@ func init() {
 			Body: true, BodyHelp: `{"volume": 50, "mute": false}`},
 		ops.Op{Name: "player_open", Description: "Open a URL on a player: a video, a web page, a TV channel (tv:?channel=2) or a YouTube video.", Method: http.MethodPost,
 			Path: "player/{id_player}/api/v6/control/open", Params: []ops.Param{idParam},
-			Body: true, BodyHelp: `{"url": "tv:?channel=2", "type": ""}`},
+			Body: true, BodyHelp: `{"url": "tv:?channel=2", "type": ""}`, Dangerous: true},
 	)
 }
 
@@ -71,8 +73,10 @@ func (st playerStatus) Power() string {
 		return "en veille"
 	case "running":
 		return "allumé"
+	case "":
+		return ""
 	}
-	return st.PowerState
+	return "état inconnu"
 }
 
 type playerVolume struct {
@@ -83,21 +87,31 @@ type playerVolume struct {
 func (s *Server) players(w http.ResponseWriter, r *http.Request) {
 	var list []player
 	err := s.fetch(r.Context(), "player/", &list)
+	// Status and volume are optional and the box answers slowly for a player
+	// that sleeps: ask for all of them at once; a failure only hides its part.
+	var g errgroup.Group
 	for i := range list {
 		p := &list[i]
 		if !p.Controllable() {
 			continue
 		}
 		base := "player/" + strconv.Itoa(p.ID) + "/api/v6/"
-		var st playerStatus
-		if s.fetch(r.Context(), base+"status/", &st) == nil {
-			p.Status = &st
-		}
-		var v playerVolume
-		if s.fetch(r.Context(), base+"control/volume/", &v) == nil {
-			p.Volume = &v
-		}
+		g.Go(func() error {
+			var st playerStatus
+			if s.fetch(r.Context(), base+"status/", &st) == nil {
+				p.Status = &st
+			}
+			return nil
+		})
+		g.Go(func() error {
+			var v playerVolume
+			if s.fetch(r.Context(), base+"control/volume/", &v) == nil {
+				p.Volume = &v
+			}
+			return nil
+		})
 	}
+	_ = g.Wait()
 	s.show(w, r, "players", map[string]any{"Players": list}, err)
 }
 

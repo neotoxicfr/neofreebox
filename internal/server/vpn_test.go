@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
 
 // vpnBox serves anonymised VPN answers and records the writes it receives.
@@ -70,7 +72,7 @@ func TestVPNPage(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status %d\n%s", resp.StatusCode, body)
 	}
-	for _, want := range []string{"WireGuard", "OpenVPN (routé)", "actif", "arrêté", "51820", "phone", "laptop", "10.8.0.70",
+	for _, want := range []string{"WireGuard", "OpenVPN (routé)", "en marche", "arrêté", "51820", "phone", "laptop", "10.8.0.70",
 		"/vpn/config/wireguard/phone", "/vpn/qr/wireguard/phone", "203.0.113.9", "Fichier OpenVPN"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page lacks %q", want)
@@ -99,13 +101,13 @@ func TestVPNWrites(t *testing.T) {
 		form url.Values
 		want string
 	}{
-		{"/vpn/openvpn_routed/start", nil, `PUT vpn/openvpn_routed/config/ {"enabled":true}`},
+		{"/vpn/openvpn_routed/start", url.Values{"confirm": {"1"}}, `PUT vpn/openvpn_routed/config/ {"enabled":true}`},
 		{"/vpn/wireguard/stop", url.Values{"confirm": {"1"}}, `PUT vpn/wireguard/config/ {"enabled":false}`},
 		{"/vpn/wireguard/port", url.Values{"confirm": {"1"}, "port": {"51821"}}, `PUT vpn/wireguard/config/ {"port":51821}`},
-		{"/vpn/wireguard/settings", url.Values{"type": {"wireguard"}, "mtu": {"1400"}}, `PUT vpn/wireguard/config/ {"conf_wireguard":{"mtu":1400}}`},
-		{"/vpn/users", url.Values{"login": {"tablet"}, "type": {"wireguard"}, "ip_reservation": {"10.8.0.71"}, "keepalive": {"15"}},
+		{"/vpn/wireguard/settings", url.Values{"confirm": {"1"}, "type": {"wireguard"}, "mtu": {"1400"}}, `PUT vpn/wireguard/config/ {"conf_wireguard":{"mtu":1400}}`},
+		{"/vpn/users", url.Values{"confirm": {"1"}, "login": {"tablet"}, "type": {"wireguard"}, "ip_reservation": {"10.8.0.71"}, "keepalive": {"15"}},
 			`POST vpn/user/ {"conf_wireguard":{"keepalive":15,"psk":false},"ip_reservation":"10.8.0.71","login":"tablet","type":"wireguard"}`},
-		{"/vpn/users/phone/update", url.Values{"ip_reservation": {"10.8.0.72"}, "keepalive": {"25"}},
+		{"/vpn/users/phone/update", url.Values{"confirm": {"1"}, "ip_reservation": {"10.8.0.72"}, "keepalive": {"25"}},
 			`PUT vpn/user/phone {"conf_wireguard":{"keepalive":25,"psk":false},"ip_reservation":"10.8.0.72"}`},
 		{"/vpn/users/phone/delete", url.Values{"confirm": {"1"}}, `DELETE vpn/user/phone null`},
 		{"/vpn/connections/wireguard-1/close", url.Values{"confirm": {"1"}}, `DELETE vpn/connection/wireguard-1 null`},
@@ -129,6 +131,10 @@ func TestVPNDangerousNeedsConfirm(t *testing.T) {
 		form url.Values
 	}{
 		{"/vpn/wireguard/stop", nil},
+		{"/vpn/openvpn_routed/start", nil},
+		{"/vpn/wireguard/settings", url.Values{"type": {"wireguard"}, "mtu": {"1400"}}},
+		{"/vpn/users", url.Values{"login": {"tablet"}, "type": {"wireguard"}, "ip_reservation": {"10.8.0.71"}}},
+		{"/vpn/users/phone/update", url.Values{"ip_reservation": {"10.8.0.72"}}},
 		{"/vpn/wireguard/port", url.Values{"port": {"1234"}}},
 		{"/vpn/users/phone/delete", nil},
 		{"/vpn/connections/wireguard-1/close", nil},
@@ -180,6 +186,20 @@ func TestVPNDownloadAndQR(t *testing.T) {
 	r2.Body.Close()
 	if !strings.Contains(r2.Header.Get("Content-Disposition"), "openvpn_routed_laptop.ovpn") {
 		t.Errorf("OpenVPN download: %v", r2.Header)
+	}
+}
+
+// The API and MCP refuse these operations without "confirm": true.
+func TestMissionOpsNeedConfirm(t *testing.T) {
+	for _, name := range []string{"vpn_user_add", "vpn_user_update", "vpn_config_download", "player_open", "storage_partition_check"} {
+		op, ok := ops.Get(name)
+		if !ok || !op.Dangerous {
+			t.Errorf("%s: not dangerous", name)
+			continue
+		}
+		if _, err := ops.Call(context.Background(), &vpnBox{}, op, map[string]any{}); !errors.Is(err, ops.ErrConfirm) {
+			t.Errorf("%s without confirm: %v", name, err)
+		}
 	}
 }
 

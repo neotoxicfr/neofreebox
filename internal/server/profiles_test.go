@@ -122,7 +122,7 @@ func TestProfilesWrites(t *testing.T) {
 		{"rule add", "/profiles/3/rules/add", url.Values{"confirm": {"1"}, "mode": {"denied"}, "start": {"21:30"}, "end": {"00:00"}, "day5": {"1"}, "name": {"Soir"}},
 			`POST network_control/3/rules/ {"enabled":true,"end_time":86400,"mode":"denied","name":"Soir","start_time":77400,"weekdays":[false,false,false,false,false,true,false,false]}`},
 		{"rule enable", "/profiles/3/rules/1/toggle", url.Values{"confirm": {"1"}, "enable": {"1"}}, `"enabled":true`},
-		{"rule delete", "/profiles/3/rules/1/delete", nil, `DELETE network_control/3/rules/1/ null`},
+		{"rule delete", "/profiles/3/rules/1/delete", url.Values{"confirm": {"1"}}, `DELETE network_control/3/rules/1/ null`},
 		{"default", "/profiles/default", url.Values{"confirm": {"1"}, "mode": {"denied"}}, `PUT parental/config/ {"default_filter_mode":"denied"}`},
 	}
 	for _, tc := range tests {
@@ -148,6 +148,7 @@ func TestProfilesDangerousNeedConfirm(t *testing.T) {
 		{"/profiles/default", url.Values{"mode": {"denied"}}},
 		{"/profiles/3/rules/add", url.Values{"mode": {"denied"}, "start": {"22:00"}, "end": {"07:00"}, "day0": {"1"}}},
 		{"/profiles/3/rules/1/toggle", url.Values{"enable": {"1"}}},
+		{"/profiles/3/rules/1/delete", nil},
 	} {
 		if resp := send(tc.path, tc.form); resp.StatusCode != http.StatusSeeOther {
 			t.Errorf("%s: status %d", tc.path, resp.StatusCode)

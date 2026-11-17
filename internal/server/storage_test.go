@@ -97,7 +97,7 @@ func TestStorageWrites(t *testing.T) {
 	if got := last(); got != `PUT storage/partition/1002 {"state":"umounted"}` {
 		t.Errorf("umount: %s", got)
 	}
-	send("/storage/partitions/1002/check", url.Values{"checkmode": {"rw"}})
+	send("/storage/partitions/1002/check", url.Values{"checkmode": {"rw"}, "confirm": {"1"}})
 	if got := last(); got != `PUT storage/partition/1002/check/ {"checkmode":"rw"}` {
 		t.Errorf("check: %s", got)
 	}
@@ -107,11 +107,22 @@ func TestStorageWrites(t *testing.T) {
 	}
 }
 
+func TestStorageCheck(t *testing.T) {
+	box, _, _, send := storageSetup(t)
+	send("/storage/partitions/1002/check", url.Values{"checkmode": {"ro"}})
+	send("/storage/partitions/1002/check", url.Values{"checkmode": {"rw"}, "confirm": {"1"}})
+	want := []string{`PUT storage/partition/1002/check/ {"checkmode":"ro"}`, `PUT storage/partition/1002/check/ {"checkmode":"rw"}`}
+	if strings.Join(box.writes, "\n") != strings.Join(want, "\n") {
+		t.Errorf("writes %v, want %v", box.writes, want)
+	}
+}
+
 func TestStorageDangerousNeedConfirm(t *testing.T) {
 	box, _, _, send := storageSetup(t)
 	send("/storage/disks/1001/state", url.Values{"state": {"disabled"}})
 	send("/storage/disks/1001/format", url.Values{"table_type": {"gpt"}, "fs_type": {"ext4"}})
 	send("/storage/partitions/1002/state", url.Values{"state": {"umounted"}})
+	send("/storage/partitions/1002/check", url.Values{"checkmode": {"rw"}})
 	// Bad values and ids never reach the box either.
 	send("/storage/disks/1001/format", url.Values{"table_type": {"x"}, "fs_type": {"ext4"}, "confirm": {"1"}})
 	send("/storage/disks/abc/state", url.Values{"state": {"enabled"}})

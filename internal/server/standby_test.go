@@ -53,7 +53,7 @@ func TestStandbyPage(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status %d", resp.StatusCode)
 	}
-	for _, want := range []string{"inactif", "Couper le Wi-Fi", `aria-label="Lundi 00:00"`, `aria-label="Dimanche 23:00"`, `value="167"`} {
+	for _, want := range []string{"désactivé", "Couper le Wi-Fi", `aria-label="Lundi 00:00"`, `aria-label="Dimanche 23:00"`, `value="167"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page lacks %q", want)
 		}
