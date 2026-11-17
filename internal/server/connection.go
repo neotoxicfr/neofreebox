@@ -78,6 +78,24 @@ func (c connStatus) MediaLabel() string {
 	return c.Media
 }
 
+// StateLabel is the line state in French.
+func (c connStatus) StateLabel() string { return lineState(c.State) }
+
+// lineState names a connection state the way the page says it.
+func lineState(s string) string {
+	switch s {
+	case "up":
+		return "connecté"
+	case "down":
+		return "déconnecté"
+	case "going_up":
+		return "connexion en cours"
+	case "going_down":
+		return "déconnexion en cours"
+	}
+	return s
+}
+
 type connConfig struct {
 	Ping         bool   `json:"ping"`
 	WOL          bool   `json:"wol"`
@@ -117,6 +135,17 @@ type ftthStatus struct {
 	Serial    string `json:"sfp_serial"`
 	PwrRx     int    `json:"sfp_pwr_rx"`
 	PwrTx     int    `json:"sfp_pwr_tx"`
+}
+
+// Tech names the optical technology in French.
+func (f ftthStatus) Tech() string {
+	switch f.LinkType {
+	case "pon", "gpon", "xgs_pon":
+		return "fibre partagée (PON)"
+	case "p2p", "ftth_p2p":
+		return "fibre dédiée (point à point)"
+	}
+	return f.LinkType
 }
 
 // Rx and Tx are the optical powers; the box gives dBm x 100.
@@ -163,6 +192,23 @@ type lteInfos struct {
 	} `json:"sim"`
 }
 
+// StateLabel is the 4G module state in French.
+func (l lteInfos) StateLabel() string {
+	switch l.State {
+	case "idle":
+		return "en veille"
+	case "connected":
+		return "connecté"
+	case "disconnected":
+		return "déconnecté"
+	case "connecting":
+		return "connexion en cours"
+	case "not_detected":
+		return "non détecté"
+	}
+	return l.State
+}
+
 type ddnsConfig struct {
 	Enabled  bool   `json:"enabled"`
 	Hostname string `json:"hostname"`
@@ -188,6 +234,28 @@ var ddnsLabels = map[string]string{
 	"authfail": "Authentification refusée", "nocredential": "Identifiants invalides", "ipinval": "IP invalide",
 	"hostinval": "Nom d'hôte invalide", "abuse": "Bloqué pour abus", "dnserror": "Erreur DNS",
 	"unavailable": "Service indisponible", "nowan": "IP publique introuvable", "unknown": "Inconnu",
+}
+
+// Tone is the badge class of the provider: nothing when off, on when up to
+// date, warn while updating, off for a failure.
+func (p ddnsProvider) Tone() string {
+	switch {
+	case !p.Config.Enabled:
+		return ""
+	case p.Status.Status == "ok":
+		return "on"
+	case p.Status.Status == "wait":
+		return "warn"
+	}
+	return "off"
+}
+
+// StateLabel is the badge text: off, or the update status.
+func (p ddnsProvider) StateLabel() string {
+	if !p.Config.Enabled {
+		return "désactivé"
+	}
+	return p.Status.Label()
 }
 
 type ddnsProvider struct {
@@ -236,7 +304,7 @@ func (s *Server) connection(w http.ResponseWriter, r *http.Request) {
 	providers := make([]ddnsProvider, len(ddnsProviders))
 	for i, p := range ddnsProviders {
 		if e := s.fetch(ctx, "connection/ddns/"+p.ID+"/", &p.Config); e != nil {
-			p.Err = e.Error()
+			p.Err = humanError(e)
 		}
 		_ = s.fetch(ctx, "connection/ddns/"+p.ID+"/status/", &p.Status)
 		providers[i] = p
@@ -248,6 +316,9 @@ func (s *Server) connection(w http.ResponseWriter, r *http.Request) {
 var sipModes = map[string]bool{"disabled": true, "direct_media": true, "any_media": true}
 
 func (s *Server) connectionConfig(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/connection") {
+		return
+	}
 	sip := formStr(r, "sip_alg")
 	if !sipModes[sip] {
 		setFlash(w, "err:Mode SIP ALG inconnu.")

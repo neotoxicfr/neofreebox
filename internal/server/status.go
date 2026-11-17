@@ -26,6 +26,12 @@ type reading struct {
 	Value int    `json:"value"`
 }
 
+// StateLabel is the line state in French.
+func (c connection) StateLabel() string { return lineState(c.State) }
+
+// MediaLabel is the line type in French, as on the connection page.
+func (c connection) MediaLabel() string { return connStatus{Media: c.Media}.MediaLabel() }
+
 type connection struct {
 	State         string `json:"state"`
 	Media         string `json:"media"`
@@ -55,6 +61,26 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() error { return s.box.Get(gctx, "system/", &sys) })
 	g.Go(func() error { return s.box.Get(gctx, "connection/", &conn) })
 	g.Go(func() (err error) { perms, err = s.box.Permissions(gctx); return err })
+	// "En bref": figures from other pages. Each is optional (a missing right
+	// or a slow endpoint only drops its line) and runs beside the main calls.
+	var (
+		hosts []lanHost
+		calls []struct {
+			New bool `json:"new"`
+		}
+		wifi struct {
+			Enabled bool `json:"enabled"`
+		}
+		haveHost = false
+		haveCall = false
+		haveWifi = false
+	)
+	soft := func(ok *bool, path string, out any) {
+		g.Go(func() error { *ok = s.box.Get(gctx, path, out) == nil; return nil })
+	}
+	soft(&haveHost, "lan/browser/pub/", &hosts)
+	soft(&haveCall, "call/log/", &calls)
+	soft(&haveWifi, "wifi/config/", &wifi)
 	data := map[string]any{"Nav": "status"}
 	if err := g.Wait(); err != nil {
 		s.log.Error("status", "err", err)
@@ -70,6 +96,33 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(granted)
 	data["System"], data["Conn"], data["Rights"] = sys, conn, granted
+	brief := map[string]any{}
+	if haveHost {
+		active := 0
+		for _, h := range hosts {
+			if h.Active {
+				active++
+			}
+		}
+		brief["HasHosts"], brief["Active"], brief["Total"] = true, active, len(hosts)
+	}
+	if haveCall {
+		unread := 0
+		for _, c := range calls {
+			if c.New {
+				unread++
+			}
+		}
+		brief["HasCalls"], brief["Unread"] = true, unread
+	}
+	if haveWifi {
+		brief["Wifi"] = wifi.Enabled
+		brief["HasWifi"] = true
+	}
+	data["Brief"] = brief
+	for i := range sys.Fans { // same names as the graphs page: "Ventilateur 1"…
+		sys.Fans[i].Name = fmt.Sprintf("Ventilateur %d", i+1)
+	}
 	data["Uptime"] = duration(time.Duration(sys.UptimeVal) * time.Second)
 	data["Down"], data["Up"] = bits(conn.RateDown*8), bits(conn.RateUp*8)
 	data["MaxDown"], data["MaxUp"] = bits(conn.BandwidthDown), bits(conn.BandwidthUp)

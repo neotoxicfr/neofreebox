@@ -7,7 +7,7 @@
   <section class="card">
     <h2>Ligne</h2>
     <dl>
-      <dt>État</dt><dd><span class="badge {{if eq .Conn.State "up"}}on{{else}}off{{end}}">{{if eq .Conn.State "up"}}connectée{{else}}{{.Conn.State}}{{end}}</span></dd>
+      <dt>État</dt><dd><span class="badge {{if eq .Conn.State "up"}}on{{else}}off{{end}}">{{.Conn.StateLabel}}</span></dd>
       <dt>Média</dt><dd>{{.Conn.MediaLabel}}</dd>
       {{if .Conn.IPv4}}<dt>IPv4</dt><dd class="mono">{{.Conn.IPv4}}</dd>{{end}}
       {{if .Conn.IPv6}}<dt>IPv6</dt><dd class="mono">{{.Conn.IPv6}}</dd>{{end}}
@@ -18,14 +18,14 @@
   <section class="card">
     <h2>Fibre optique</h2>
     <dl>
-      <dt>Lien</dt><dd><span class="badge {{if .Link}}on{{else}}off{{end}}">{{if .Link}}établi{{else}}coupé{{end}}</span></dd>
+      <dt>Lien</dt><dd><span class="badge {{if .Link}}on{{else}}off{{end}}">{{if .Link}}connecté{{else}}déconnecté{{end}}</span></dd>
       <dt>Signal reçu</dt><dd>{{if .HasSignal}}oui{{else}}non{{end}}</dd>
       {{if .HasPower}}<dt>Puissance reçue</dt><dd>{{.Rx}}</dd>
       <dt>Puissance émise</dt><dd>{{.Tx}}</dd>{{end}}
       <dt>Module</dt><dd>{{.Vendor}} {{.Model}}</dd>
       <dt>Série</dt><dd class="mono">{{.Serial}}</dd>
-      {{if .LinkType}}<dt>Technologie</dt><dd>{{.LinkType}}</dd>{{end}}
-      {{if not .AlimOK}}<dt>Alimentation</dt><dd class="error">défaut</dd>{{end}}
+      {{if .LinkType}}<dt>Technologie</dt><dd>{{.Tech}}</dd>{{end}}
+      {{if not .AlimOK}}<dt>Alimentation</dt><dd><span class="badge off">défaut</span></dd>{{end}}
     </dl>
   </section>
   {{end}}
@@ -35,11 +35,11 @@
     <dl>
       <dt>Synchronisation</dt><dd>{{.Status.Status}} ({{.Status.Modulation}}, {{.Status.Protocol}})</dd>
       <dt>Depuis</dt><dd>{{since .Status.Uptime}}</dd>
-      <dt>Débit descendant</dt><dd>{{.Down.Rate}} kb/s sur {{.Down.MaxRate}}</dd>
-      <dt>Débit montant</dt><dd>{{.Up.Rate}} kb/s sur {{.Up.MaxRate}}</dd>
-      <dt>SNR (desc. / mont.)</dt><dd>{{.Down.SNR}} / {{.Up.SNR}} dB</dd>
-      <dt>Atténuation (desc. / mont.)</dt><dd>{{.Down.Attn}} / {{.Up.Attn}} dB</dd>
-      <dt>CRC (desc. / mont.)</dt><dd>{{.Down.CRC}} / {{.Up.CRC}}</dd>
+      <dt>Débit en réception</dt><dd>{{.Down.Rate}} kb/s sur {{.Down.MaxRate}}</dd>
+      <dt>Débit en envoi</dt><dd>{{.Up.Rate}} kb/s sur {{.Up.MaxRate}}</dd>
+      <dt>Rapport signal/bruit (réception / envoi)</dt><dd>{{.Down.SNR}} / {{.Up.SNR}} dB</dd>
+      <dt>Atténuation (réception / envoi)</dt><dd>{{.Down.Attn}} / {{.Up.Attn}} dB</dd>
+      <dt>Erreurs CRC (réception / envoi)</dt><dd>{{.Down.CRC}} / {{.Up.CRC}}</dd>
     </dl>
   </section>
   {{end}}
@@ -47,7 +47,7 @@
   <section class="card">
     <h2>Secours 4G</h2>
     <dl>
-      <dt>État</dt><dd>{{.State}}</dd>
+      <dt>État</dt><dd>{{.StateLabel}}</dd>
       <dt>Carte SIM</dt><dd>{{if .SIM.Present}}présente{{else}}absente{{end}}</dd>
       <dt>Signal</dt><dd>{{.Radio.SignalLevel}} sur 5</dd>
       {{if .Network.IPv4}}<dt>IPv4</dt><dd class="mono">{{.Network.IPv4}}</dd>{{end}}
@@ -60,17 +60,19 @@
   <h2>Réglages</h2>
   <form method="post" action="/connection/config" class="stack">
     <label class="check"><input type="checkbox" name="ping" value="1"{{if .Cfg.Ping}} checked{{end}}> Répondre au ping depuis internet</label>
-    <label class="check"><input type="checkbox" name="wol" value="1"{{if .Cfg.WOL}} checked{{end}}> Proxy Wake-on-LAN</label>
+    <label class="check"><input type="checkbox" name="wol" value="1"{{if .Cfg.WOL}} checked{{end}}> Réveil à distance des appareils (proxy Wake-on-LAN)</label>
     <label class="check"><input type="checkbox" name="adblock" value="1"{{if .Cfg.Adblock}} checked{{end}}> Bloquer les publicités</label>
     <label class="check"><input type="checkbox" name="allow_token_request" value="1"{{if .Cfg.AllowToken}} checked{{end}}> Autoriser de nouvelles applications à demander un jeton</label>
-    <label>SIP ALG
+    <label>Compatibilité téléphonie SIP (SIP ALG)
       <select name="sip_alg">
         <option value="disabled"{{if eq .Cfg.SIPALG "disabled"}} selected{{end}}>Désactivé</option>
         <option value="direct_media"{{if eq .Cfg.SIPALG "direct_media"}} selected{{end}}>Média direct entre terminaux SIP</option>
         <option value="any_media"{{if eq .Cfg.SIPALG "any_media"}} selected{{end}}>Média entre tous les appareils</option>
       </select>
     </label>
-    <div class="actions"><button>Enregistrer</button></div>
+    <p class="hint">Laisse le SIP ALG désactivé sauf si un téléphone IP ou un softphone ne fonctionne pas derrière la box.</p>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages changent ce que la box laisse passer depuis et vers internet.</label>
+    <div class="actions"><button class="danger">Enregistrer</button></div>
   </form>
 </section>
 
@@ -98,7 +100,7 @@
     {{if .Delegations}}
     <div class="table-wrap">
       <table class="stack-sm">
-        <thead><tr><th>Préfixe délégué</th><th>Routeur suivant (lien-local)</th></tr></thead>
+        <thead><tr><th scope="col">Préfixe délégué</th><th scope="col">Routeur suivant (lien-local)</th></tr></thead>
         <tbody>
         {{range $i, $d := .Delegations}}
         <tr>
@@ -121,7 +123,7 @@
   <div class="grid">
   {{range .DDNS}}
     <div class="stack">
-      <h3>{{.Label}} <span class="badge {{if .Config.Enabled}}on{{else}}off{{end}}">{{.Status.Label}}</span></h3>
+      <h3>{{.Label}} <span class="badge{{with .Tone}} {{.}}{{end}}">{{.StateLabel}}</span></h3>
       {{if .Err}}<p class="error">{{.Err}}</p>{{end}}
       {{if .Status.LastRefresh}}<p class="muted small">Dernière mise à jour : {{date .Status.LastRefresh}}</p>{{end}}
       <form method="post" action="/connection/ddns/{{.ID}}" class="stack">

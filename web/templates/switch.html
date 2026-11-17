@@ -5,9 +5,9 @@
 <div class="grid">
 {{range .Ports}}
   <section class="card">
-    <h2>{{.Title}} <span class="badge {{if eq .Link "up"}}on{{else}}off{{end}}">{{if eq .Link "up"}}branché{{else}}débranché{{end}}</span></h2>
+    <h2>{{.Title}} <span class="badge{{if eq .Link "up"}} on{{end}}">{{if eq .Link "up"}}connecté{{else}}déconnecté{{end}}</span></h2>
     <dl>
-      {{if eq .Link "up"}}<dt>Mode</dt><dd>{{.Mode}}</dd>{{end}}
+      {{if eq .Link "up"}}<dt>Mode négocié</dt><dd>{{.Mode}}</dd>{{end}}
       {{range .MACList}}<dt>Appareil</dt><dd>{{or .Hostname .MAC}} <span class="mono muted">{{.MAC}}</span></dd>{{end}}
       {{with .Stats}}
       <dt>Reçu</dt><dd>{{bytes .RxBytes}} <span class="muted">({{bytes .RxRate}}/s)</span></dd>
@@ -16,7 +16,7 @@
       {{end}}
     </dl>
     <details class="inline">
-      <summary class="ghost-btn">Forcer la vitesse</summary>
+      <summary class="ghost-btn">Forcer la vitesse<span class="sr-only"> du port {{.Title}}</span></summary>
       <form method="post" action="/switch/{{.ID}}" class="stack">
         <label>Vitesse
           <select name="speed">
@@ -26,11 +26,11 @@
             <option value="1000"{{if eq .Config.Speed "1000"}} selected{{end}}>1 Gb/s</option>
           </select>
         </label>
-        <label>Duplex
+        <label>Duplex (sens de transmission)
           <select name="duplex">
             <option value="auto"{{if eq .Config.Duplex "auto"}} selected{{end}}>Automatique</option>
-            <option value="half"{{if eq .Config.Duplex "half"}} selected{{end}}>Half</option>
-            <option value="full"{{if eq .Config.Duplex "full"}} selected{{end}}>Full</option>
+            <option value="half"{{if eq .Config.Duplex "half"}} selected{{end}}>Semi-duplex</option>
+            <option value="full"{{if eq .Config.Duplex "full"}} selected{{end}}>Duplex intégral</option>
           </select>
         </label>
         <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode non pris en charge par l'appareil branché coupe la liaison.</label>

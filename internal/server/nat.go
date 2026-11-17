@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/neotoxicfr/neofreebox/internal/ops"
 )
@@ -38,8 +39,8 @@ func init() {
 			BodyHelp: `{"enabled": true, "comment": "web", "ip_proto": "tcp", "wan_port_start": 8080, "wan_port_end": 8080, "lan_ip": "192.168.1.42", "lan_port": 80, "src_ip": "0.0.0.0"}`},
 		ops.Op{Name: "nat_redir_update", Description: "Change a port forwarding (partial update), for example enable or disable it. Enabling exposes the port to the internet.", Method: http.MethodPut,
 			Path: "fw/redir/{id}", Params: []ops.Param{redirID}, Body: true, Dangerous: true, BodyHelp: `{"enabled": false}`},
-		ops.Op{Name: "nat_redir_delete", Description: "Delete a port forwarding.", Method: http.MethodDelete,
-			Path: "fw/redir/{id}", Params: []ops.Param{redirID}},
+		ops.Op{Name: "nat_redir_delete", Description: "Delete a port forwarding. It cuts access to the service that was forwarded.", Method: http.MethodDelete,
+			Path: "fw/redir/{id}", Params: []ops.Param{redirID}, Dangerous: true},
 		ops.Op{Name: "nat_incoming_list", Description: "List the incoming ports the box's own services (remote access, FTP, torrents, VPN servers) bind on the public IP: id, enabled, active, type, in_port, min_port, max_port, readonly.",
 			Path: "fw/incoming/"},
 		ops.Op{Name: "nat_incoming_get", Description: "Get one incoming port.",
@@ -86,6 +87,14 @@ func (r natRedir) LanPorts() string {
 	return strconv.Itoa(r.LanPort)
 }
 
+// ProtoLabel is the protocol as people write it.
+func (r natRedir) ProtoLabel() string { return protoLabel(r.Proto) }
+
+// protoLabel writes an API protocol name ("tcp", "tcp_udp") in capitals.
+func protoLabel(p string) string {
+	return strings.ToUpper(strings.ReplaceAll(p, "_", " et "))
+}
+
 // AnySource is true when the rule applies to every source address.
 func (r natRedir) AnySource() bool { return r.SrcIP == "" || r.SrcIP == "0.0.0.0" }
 
@@ -99,6 +108,9 @@ type natIncoming struct {
 	MaxPort  int    `json:"max_port"`
 	ReadOnly bool   `json:"readonly"`
 }
+
+// ProtoLabel is the port's protocol as people write it.
+func (p natIncoming) ProtoLabel() string { return protoLabel(p.Type) }
 
 // Label says what the incoming port is for.
 func (p natIncoming) Label() string {
@@ -142,6 +154,9 @@ type natUPnPRedir struct {
 	Desc      string `json:"desc"`
 	Remaining int64  `json:"remaining"`
 }
+
+// ProtoLabel is the protocol as people write it.
+func (r natUPnPRedir) ProtoLabel() string { return protoLabel(r.Proto) }
 
 func (s *Server) nat(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -209,6 +224,9 @@ func (s *Server) setRedirEnabled(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteRedir(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/nat") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "fw/redir/"+url.PathEscape(r.PathValue("id")), nil, "Redirection supprimée.", "/nat")
 }
 
@@ -266,5 +284,8 @@ func (s *Server) setUPnP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteUPnPRedir(w http.ResponseWriter, r *http.Request) {
+	if !confirmed(w, r, "/nat") {
+		return
+	}
 	s.change(w, r, http.MethodDelete, "upnpigd/redir/"+url.PathEscape(r.PathValue("id")), nil, "Redirection UPnP supprimée.", "/nat")
 }
