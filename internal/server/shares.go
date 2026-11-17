@@ -57,7 +57,7 @@ func init() {
 			Path: "airmedia/config/", Body: true, BodyHelp: `{"enabled": true, "password": "3615"}`},
 		ops.Op{Name: "airmedia_receivers_list", Description: "List the AirMedia receivers reachable by the box: name, password_protected, capabilities (photo, audio, video, screen).",
 			Path: "airmedia/receivers/"},
-		ops.Op{Name: "airmedia_receiver_send", Description: "Start or stop a photo or video on an AirMedia receiver. For video, media is a URL; for a photo, a base64 file path on the box storage. position is percent*1000.", Method: http.MethodPost,
+		ops.Op{Name: "airmedia_receiver_send", Description: "Start or stop a photo or video on an AirMedia receiver. For video, media is a URL; for a photo, a base64 file path on the box storage. position is percent*1000.", Method: http.MethodPost, Dangerous: true,
 			Path: "airmedia/receivers/{name}/", Params: []ops.Param{{Name: "name", Description: `Receiver name, e.g. "Freebox Player"`}},
 			Body: true, BodyHelp: `{"action": "start", "media_type": "video", "media": "http://example.com/clip.mp4", "password": "", "position": 0}`},
 	)
@@ -218,8 +218,12 @@ func (s *Server) saveAfp(w http.ResponseWriter, r *http.Request) {
 	s.change(w, r, http.MethodPut, "netshare/afp/", body, "Partage Mac enregistré.", "/shares")
 }
 
-// saveFtp changes what is not exposure: on/off and the password.
+// saveFtp changes what is not exposure: on/off and the password. Enabling
+// the server publishes it with the exposure already set, so it is confirmed.
 func (s *Server) saveFtp(w http.ResponseWriter, r *http.Request) {
+	if formBool(r, "enabled") && !confirmed(w, r, "/shares") {
+		return
+	}
 	body := map[string]any{"enabled": formBool(r, "enabled")}
 	sharesSecret(r, body, "password")
 	s.change(w, r, http.MethodPut, "ftp/config/", body, "FTP enregistré.", "/shares")

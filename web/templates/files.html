@@ -13,7 +13,7 @@
 <div class="card table-wrap section">
 {{if .Entries}}
 <table class="stack-sm">
-  <thead><tr><th>Nom</th><th>Taille</th><th>Modifié</th><th><span class="sr-only">Actions</span></th></tr></thead>
+  <thead><tr><th scope="col">Nom</th><th scope="col">Taille</th><th scope="col">Modifié</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
   <tbody>
   {{range .Entries}}
   <tr>
@@ -24,7 +24,7 @@
     <td>
       <div class="actions">
         <details class="inline">
-          <summary class="ghost-btn">Renommer</summary>
+          <summary class="ghost-btn">Renommer<span class="sr-only"> {{.Name}}</span></summary>
           <form method="post" action="/files/rename" class="row">
             <input type="hidden" name="p" value="{{$.P}}"><input type="hidden" name="src" value="{{.Path}}">
             <label class="grow">Nouveau nom<input name="name" value="{{.Name}}" required maxlength="255"></label>
@@ -33,7 +33,7 @@
         </details>
         {{if not .IsDir}}
         <details class="inline">
-          <summary class="ghost-btn">Partager</summary>
+          <summary class="ghost-btn">Partager<span class="sr-only"> {{.Name}}</span></summary>
           <form method="post" action="/files/share" class="stack">
             <input type="hidden" name="p" value="{{$.P}}"><input type="hidden" name="target" value="{{.Path}}">
             <label>Durée en jours (0 = sans limite)<input type="number" name="days" min="0" value="7"></label>
@@ -88,14 +88,17 @@
 <section class="card section table-wrap">
   <h2>Tâches</h2>
   <table class="stack-sm">
-    <thead><tr><th>Type</th><th>État</th><th>Progression</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Type</th><th scope="col">État</th><th scope="col">Progression</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Tasks}}
     <tr>
       <td>{{.Type}}</td>
       <td data-label="État">{{.State}}{{if ne .Error "none"}}{{if .Error}} ({{.Error}}){{end}}{{end}}</td>
       <td data-label="Progression">{{.Progress}} %</td>
-      <td><form method="post" action="/files/tasks/{{.ID}}/delete"><input type="hidden" name="p" value="{{$.P}}"><button class="ghost small">Retirer</button></form></td>
+      <td><details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> la tâche {{.Type}} {{.ID}}</span></summary>
+        <form method="post" action="/files/tasks/{{.ID}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera arrêtée si elle est en cours (les fichiers déjà traités restent).</label>
+          <button class="danger small">Retirer définitivement</button></form></details></td>
     </tr>
     {{end}}
     </tbody>
@@ -107,14 +110,17 @@
 <section class="card section table-wrap">
   <h2>Liens de partage</h2>
   <table class="stack-sm">
-    <thead><tr><th>Nom</th><th>Expire</th><th>Lien</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Expire</th><th scope="col">Lien</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
     {{range .Shares}}
     <tr>
       <td>{{.Name}}</td>
       <td data-label="Expire">{{if .Expire}}{{date .Expire}}{{else}}jamais{{end}}</td>
       <td data-label="Lien" class="mono">{{or .FullURL "accès distant désactivé"}}</td>
-      <td><form method="post" action="/files/share/{{.Token}}/delete"><input type="hidden" name="p" value="{{$.P}}"><button class="ghost small">Supprimer</button></form></td>
+      <td><details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> le lien {{.Name}}</span></summary>
+        <form method="post" action="/files/share/{{.Token}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le lien cessera de fonctionner pour tout le monde.</label>
+          <button class="danger small">Supprimer définitivement</button></form></details></td>
     </tr>
     {{end}}
     </tbody>

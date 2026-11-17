@@ -130,11 +130,11 @@ func TestFilesWrites(t *testing.T) {
 	if got, want := box.last(), `POST share_link/ {"expire":0,"fullurl":"","path":"`+f1+`"}`; got != want {
 		t.Errorf("share: %s", got)
 	}
-	send("/files/share/tok_abc/delete", url.Values{"p": {cur}})
+	send("/files/share/tok_abc/delete", url.Values{"p": {cur}, "confirm": {"1"}})
 	if got, want := box.last(), `DELETE share_link/tok_abc null`; got != want {
 		t.Errorf("share delete: %s", got)
 	}
-	send("/files/tasks/7/delete", url.Values{"p": {cur}})
+	send("/files/tasks/7/delete", url.Values{"p": {cur}, "confirm": {"1"}})
 	if got, want := box.last(), `DELETE fs/tasks/7 null`; got != want {
 		t.Errorf("task delete: %s", got)
 	}
@@ -146,6 +146,8 @@ func TestFilesDangerousNeedConfirm(t *testing.T) {
 	send("/files/delete", url.Values{"p": {cur}, "files": {f}})
 	send("/files/share", url.Values{"p": {cur}, "target": {f}, "days": {"1"}})
 	send("/files/move", url.Values{"p": {cur}, "files": {f}, "dest": {"/x"}, "mode": {"overwrite"}})
+	send("/files/share/tok_abc/delete", url.Values{"p": {cur}})
+	send("/files/tasks/7/delete", url.Values{"p": {cur}})
 	if len(box.writes) != 0 {
 		t.Fatalf("unconfirmed actions reached the box: %v", box.writes)
 	}

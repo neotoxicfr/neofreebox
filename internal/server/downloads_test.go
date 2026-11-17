@@ -145,7 +145,7 @@ func TestDownloadsWrites(t *testing.T) {
 	}{
 		{"pause", "/downloads/7/status", url.Values{"status": {"stopped"}}, "PUT", "downloads/7", map[string]any{"status": "stopped"}},
 		{"priority", "/downloads/7/priority", url.Values{"io_priority": {"high"}}, "PUT", "downloads/7", map[string]any{"io_priority": "high"}},
-		{"remove", "/downloads/7/delete", url.Values{}, "DELETE", "downloads/7", nil},
+		{"remove", "/downloads/7/delete", url.Values{"confirm": {"1"}}, "DELETE", "downloads/7", nil},
 		{"erase", "/downloads/7/erase", url.Values{"confirm": {"1"}}, "DELETE", "downloads/7/erase", nil},
 		{"file", "/downloads/7/file", url.Values{"file": {"7-1"}, "priority": {"no_dl"}}, "PUT", "downloads/7/files/7-1", map[string]any{"priority": "no_dl"}},
 		{"tracker", "/downloads/7/tracker", url.Values{"announce": {"udp://tracker.example.org:80"}}, "POST", "downloads/7/trackers", map[string]any{"announce": "udp://tracker.example.org:80"}},
@@ -161,7 +161,7 @@ func TestDownloadsWrites(t *testing.T) {
 		{"feed auto", "/downloads/feeds/3/auto", url.Values{"auto": {"1"}}, "PUT", "downloads/feeds/3", map[string]any{"auto_download": true}},
 		{"feed fetch", "/downloads/feeds/3/fetch", url.Values{}, "POST", "downloads/feeds/3/fetch", nil},
 		{"feeds fetch all", "/downloads/feeds/fetch", url.Values{}, "POST", "downloads/feeds/fetch", nil},
-		{"feed delete", "/downloads/feeds/3/delete", url.Values{}, "DELETE", "downloads/feeds/3", nil},
+		{"feed delete", "/downloads/feeds/3/delete", url.Values{"confirm": {"1"}}, "DELETE", "downloads/feeds/3", nil},
 		{"feed read all", "/downloads/feeds/3/read", url.Values{}, "POST", "downloads/feeds/3/items/mark_all_as_read", nil},
 		{"item download", "/downloads/feeds/3/items/31/download", url.Values{}, "POST", "downloads/feeds/3/items/31/download", nil},
 		{"item read", "/downloads/feeds/3/items/31/read", url.Values{"read": {"1"}}, "PUT", "downloads/feeds/3/items/31", map[string]any{"is_read": true}},
@@ -178,6 +178,16 @@ func TestDownloadsWrites(t *testing.T) {
 				t.Errorf("%s: body %v, want %s=%v", tc.name, got.Body, k, v)
 			}
 		}
+	}
+}
+
+func TestDownloadsDeletionsNeedConfirm(t *testing.T) {
+	box, srv, c := dlSetup(t)
+	for _, p := range []string{"/downloads/7/delete", "/downloads/7/erase", "/downloads/feeds/3/delete"} {
+		post(t, c, srv, p, url.Values{})
+	}
+	if len(box.writes) != 0 {
+		t.Fatalf("unconfirmed deletions reached the box: %v", box.writes)
 	}
 }
 

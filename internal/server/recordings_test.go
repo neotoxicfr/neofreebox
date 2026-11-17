@@ -147,7 +147,7 @@ func TestRecordingsWrites(t *testing.T) {
 	do("/recordings/programmed", url.Values{"channel": {"uuid-webtv-2"}, "name": {"Test"}, "subname": {"S"}, "start": {local(20)}, "end": {local(21)}})
 	do("/recordings/programmed/7/update", url.Values{"name": {"Nouveau"}, "subname": {""}, "start": {local(20)}, "end": {local(22)}})
 	do("/recordings/programmed/8/enabled", url.Values{"enabled": {"0"}})
-	do("/recordings/programmed/7/delete", nil)
+	do("/recordings/programmed/7/delete", url.Values{"confirm": {"1"}})
 	do("/recordings/finished/5/rename", url.Values{"name": {"Renommé"}, "subname": {"x"}})
 	do("/recordings/finished/5/delete", url.Values{"confirm": {"1"}})
 	want := []string{
@@ -168,11 +168,47 @@ func TestRecordingsWrites(t *testing.T) {
 func TestRecordingsRefusals(t *testing.T) {
 	box, _, _, do := pvrClient(t)
 	do("/recordings/finished/5/delete", nil) // dangerous, not confirmed
+	do("/recordings/programmed/7/delete", nil)
 	do("/recordings/config", url.Values{"margin_before": {"-1"}, "margin_after": {"0"}})
 	do("/recordings/programmed", url.Values{"channel": {"uuid-webtv-2"}, "name": {"x"}, "start": {"2030-01-02T21:00"}, "end": {"2030-01-02T20:00"}})
 	do("/recordings/programmed", url.Values{"channel": {"uuid-webtv-2"}, "name": {"x"}, "start": {"nope"}, "end": {"nope"}})
 	do("/recordings/programmed/7/update", url.Values{"name": {"x"}})
 	if len(box.writes) != 0 {
 		t.Fatalf("unexpected writes %v", box.writes)
+	}
+}
+
+// manyChannelsBox has more channels than the default page shows.
+type manyChannelsBox struct{ pvrBox }
+
+func (b *manyChannelsBox) Get(ctx context.Context, path string, out any) error {
+	var chans []tvBouquetChannel
+	names := map[string]tvChannelInfo{}
+	for i := 1; i <= tvLimit+20; i++ {
+		u := fmt.Sprintf("uuid-%d", i)
+		chans = append(chans, tvBouquetChannel{Number: i, UUID: u, Available: true})
+		names[u] = tvChannelInfo{Name: fmt.Sprintf("Chaine n%d", i)}
+	}
+	switch path {
+	case "tv/bouquets/1/channels/":
+		j, _ := json.Marshal(chans)
+		return json.Unmarshal(j, out)
+	case "tv/channels/":
+		j, _ := json.Marshal(names)
+		return json.Unmarshal(j, out)
+	}
+	return b.pvrBox.Get(ctx, path, out)
+}
+
+func TestTVLimitsChannels(t *testing.T) {
+	srv := newTestServer(t, &manyChannelsBox{})
+	c := browser(srv)
+	post(t, c, srv, "/setup", creds("admin", "correct horse battery"))
+	_, body := get(t, c, srv, "/tv")
+	if !strings.Contains(body, "Chaine n100<") || strings.Contains(body, "Chaine n101<") || !strings.Contains(body, "Tout afficher (120)") {
+		t.Error("default page must show 100 channels and a link to all")
+	}
+	if _, body := get(t, c, srv, "/tv?tout=1"); !strings.Contains(body, "Chaine n120<") || strings.Contains(body, "Tout afficher") {
+		t.Error("tout=1 must show every channel")
 	}
 }
