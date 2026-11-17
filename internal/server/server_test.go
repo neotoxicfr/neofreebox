@@ -36,12 +36,16 @@ func (f fakeBox) Permissions(context.Context) (map[string]bool, error) {
 	return map[string]bool{"settings": true, "calls": true, "vm": false}, f.err
 }
 
+// setupCode is fixed in tests; the server prints a random one.
+const setupCode = "testcode42"
+
 func newTestServer(t *testing.T, box Box) *httptest.Server {
 	t.Helper()
 	s, err := New(box, t.TempDir(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.setupCode = setupCode
 	srv := httptest.NewTLSServer(s.Handler()) // TLS: the session cookie is Secure
 	t.Cleanup(srv.Close)
 	return srv
@@ -80,7 +84,7 @@ func get(t *testing.T, c *http.Client, srv *httptest.Server, path string) (*http
 }
 
 func creds(user, pass string) url.Values {
-	return url.Values{"username": {user}, "password": {pass}, "confirm": {pass}}
+	return url.Values{"username": {user}, "password": {pass}, "confirm": {pass}, "code": {setupCode}}
 }
 
 func TestFirstRunThenSignIn(t *testing.T) {
@@ -89,6 +93,11 @@ func TestFirstRunThenSignIn(t *testing.T) {
 
 	if resp, _ := get(t, c, srv, "/"); resp.Header.Get("Location") != "/setup" {
 		t.Fatalf("no account: / redirects to %q, want /setup", resp.Header.Get("Location"))
+	}
+	noCode := creds("admin", "correct horse battery")
+	noCode.Set("code", "guess")
+	if resp := post(t, c, srv, "/setup", noCode); resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("wrong setup code: status %d", resp.StatusCode)
 	}
 	if resp := post(t, c, srv, "/setup", creds("admin", "short")); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("short password: status %d", resp.StatusCode)

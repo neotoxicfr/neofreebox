@@ -68,7 +68,8 @@ Network comes first, then the rest of Freebox OS:
    des accès → Applications → neofreebox (new apps only get a few by default).
 3. **Start it** with [`deploy/compose.yml.example`](deploy/compose.yml.example);
    `docker compose run --rm neofreebox check` prints the rights it got.
-4. Open it: the first visit asks you to create the account.
+4. Open it and create the account, with the one-time setup code printed in
+   the container logs (`docker logs neofreebox`).
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -82,7 +83,7 @@ Network comes first, then the rest of Freebox OS:
 - A single Go binary with the HTML templates, stylesheet and scripts embedded;
   no database, since the state lives on the box.
 - `internal/fbx` is the Freebox OS API client: app pairing, HMAC-SHA1 challenge
-  sessions renewed on expiry, and the box's WebSocket event stream. The box is
+  sessions renewed on expiry. The box is
   reached over HTTPS with Free's root certificates embedded.
 - The image is `distroless/static`, non-root, read-only.
 

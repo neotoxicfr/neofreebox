@@ -40,6 +40,9 @@ type Server struct {
 	limiter  *limiter
 	pages    map[string]*template.Template
 	log      *slog.Logger
+	// setupCode must be typed on the first-run form: it is only printed in
+	// the logs, so reaching the page is not enough to claim the box.
+	setupCode string
 }
 
 // New loads the account from dataDir and parses the templates.
@@ -52,14 +55,19 @@ func New(box Box, dataDir string, log *slog.Logger) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{
+	s := &Server{
 		box:      box,
 		account:  acct,
 		sessions: newSessions(sessionTTL),
 		limiter:  &limiter{max: 10, window: 15 * time.Minute},
 		pages:    pages,
 		log:      log,
-	}, nil
+	}
+	if !acct.exists() {
+		s.setupCode = newSetupCode()
+		log.Warn("no account yet: open the app and enter this setup code", "code", s.setupCode)
+	}
+	return s, nil
 }
 
 func parsePages() (map[string]*template.Template, error) {

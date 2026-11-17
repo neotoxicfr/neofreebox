@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
 	"errors"
 	"net/http"
 	"strings"
@@ -24,6 +26,15 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	}
 	user, pass, ok := s.form(w, r)
 	if !ok {
+		return
+	}
+	if !s.limiter.allow() {
+		s.render(w, http.StatusTooManyRequests, "setup", map[string]any{"Error": "Trop d'essais. Réessaie dans quelques minutes.", "Username": user})
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(strings.TrimSpace(r.PostFormValue("code"))), []byte(s.setupCode)) != 1 {
+		s.limiter.fail()
+		s.render(w, http.StatusUnauthorized, "setup", map[string]any{"Error": "Code de configuration incorrect : il est affiché dans les journaux du conteneur.", "Username": user})
 		return
 	}
 	if msg := checkCredentials(user, pass, r.PostFormValue("confirm")); msg != "" {
@@ -121,6 +132,18 @@ func (s *Server) form(w http.ResponseWriter, r *http.Request) (user, pass string
 		return "", "", false
 	}
 	return strings.TrimSpace(r.PostFormValue("username")), r.PostFormValue("password"), true
+}
+
+// newSetupCode returns 10 random characters from an alphabet without
+// look-alikes, easy to copy from a log line.
+func newSetupCode() string {
+	const alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+	b := make([]byte, 10)
+	_, _ = rand.Read(b)
+	for i := range b {
+		b[i] = alphabet[int(b[i])%len(alphabet)]
+	}
+	return string(b)
 }
 
 func checkCredentials(user, pass, confirm string) string {

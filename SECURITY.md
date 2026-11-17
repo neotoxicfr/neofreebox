@@ -23,8 +23,11 @@ neofreebox holds a Freebox OS app token with every right on the box, so it is
 meant to sit behind an authenticating reverse proxy (Authelia, Authentik…) and
 also has its own login:
 
-- A single account, created on first run. The password is hashed with bcrypt
-  in `account.json` in the data directory; sign-in attempts are rate-limited.
+- A single account, created on first run with a one-time setup code that is
+  only printed in the container logs, so reaching the page is not enough. The password is hashed with bcrypt
+  in `account.json` in the data directory; failed sign-ins are limited to 10 per 15 minutes for the whole app (it sits
+  behind a proxy, so client IPs mean nothing). Someone who gets past the proxy
+  could use that to lock you out for 15 minutes: an accepted trade-off.
 - Sessions are `HttpOnly`, `Secure`, `SameSite=Lax` cookies kept in memory: a
   restart signs you out.
 - Every state-changing request is a POST checked by Go's cross-origin
