@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -112,4 +113,33 @@ func duration(d time.Duration) string {
 		return fmt.Sprintf("%d j %d h", days, h)
 	}
 	return fmt.Sprintf("%d h %02d min", h, m)
+}
+
+// shortDuration writes a duration the way people say it: "45 s", "12 min",
+// "2 h 05", "3 j 4 h".
+func shortDuration(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%d s", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%d min", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%d h %02d", int(d.Hours()), int(d.Minutes())%60)
+	}
+	return fmt.Sprintf("%d j %d h", int(d.Hours())/24, int(d.Hours())%24)
+}
+
+// band names a Wi-Fi band the same way everywhere: "2,4 GHz", "5 GHz"…
+func band(b string) string {
+	switch strings.ToLower(strings.TrimSpace(b)) {
+	case "2g4", "2.4g", "2d4g", "2.4ghz", "2,4 ghz":
+		return "2,4 GHz"
+	case "5g", "5ghz":
+		return "5 GHz"
+	case "6g", "6ghz":
+		return "6 GHz"
+	case "60g", "60ghz":
+		return "60 GHz"
+	}
+	return b
 }

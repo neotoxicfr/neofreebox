@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -65,9 +66,18 @@ func New(baseURL string, app App, token string) (*Client, error) {
 	}
 	return &Client{
 		base: strings.TrimRight(baseURL, "/") + fmt.Sprintf("/api/v%d", APIVersion),
+		// No overall Timeout: it would also cut file downloads streamed by
+		// Raw. Callers bound each call with their context; the transport
+		// bounds connecting and waiting for headers.
 		http: &http.Client{
-			Timeout:   20 * time.Second,
-			Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}},
+			Transport: &http.Transport{
+				TLSClientConfig:       &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
+				DialContext:           (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 30 * time.Second,
+				MaxIdleConnsPerHost:   6, // pages read several endpoints at once
+				IdleConnTimeout:       90 * time.Second,
+			},
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},

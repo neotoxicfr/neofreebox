@@ -6,21 +6,24 @@
 <meta name="color-scheme" content="dark light">
 <title>{{block "title" .}}neofreebox{{end}}</title>
 <link rel="stylesheet" href="/static/app.css?v={{version}}">
-<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icon.svg?v={{version}}" type="image/svg+xml">
 <script src="/static/app.js?v={{version}}" defer></script>
 </head>
 <body{{if .Nav}} class="app"{{end}}>
+<a class="skip" href="#main">Aller au contenu</a>
 {{if .Nav}}
 <header class="top">
-  <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="24" height="24">neofreebox</a>
-  <details class="menu-toggle"><summary>Menu</summary></details>
+  <a class="brand" href="/"><img src="/static/icon.svg?v={{version}}" alt="" width="24" height="24">neofreebox</a>
+  <details class="menu-toggle"><summary aria-controls="menu">Menu</summary></details>
 </header>
 <aside class="side" id="menu">
-  <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="24" height="24">neofreebox</a>
+  <a class="brand" href="/"><img src="/static/icon.svg?v={{version}}" alt="" width="24" height="24">neofreebox</a>
   <nav aria-label="Principale">
-  {{range .Menu}}
-    <p class="group">{{.Name}}</p>
-    <ul>{{range .Items}}<li><a href="{{.Href}}"{{if eq $.Nav .Slug}} aria-current="page"{{end}}>{{.Title}}</a></li>{{end}}</ul>
+  {{range .Menu}}{{$open := false}}{{range .Items}}{{if eq $.Nav .Slug}}{{$open = true}}{{end}}{{end}}
+    <details class="nav-group"{{if or $open (eq .Name "Freebox")}} open{{end}}>
+      <summary class="group">{{.Name}}</summary>
+      <ul>{{range .Items}}<li><a href="{{.Href}}"{{if eq $.Nav .Slug}} aria-current="page"{{end}}>{{.Title}}</a></li>{{end}}</ul>
+    </details>
   {{end}}
   </nav>
   <div class="side-foot">
@@ -29,7 +32,7 @@
   </div>
 </aside>
 {{end}}
-<main{{if not .Nav}} class="narrow"{{end}}>
+<main id="main" tabindex="-1"{{if not .Nav}} class="narrow"{{end}}>
 {{with .Flash}}<p class="{{if .Ok}}ok{{else}}error{{end}}" role="{{if .Ok}}status{{else}}alert{{end}}">{{.Text}}</p>{{end}}
 {{block "content" .}}{{end}}
 </main>

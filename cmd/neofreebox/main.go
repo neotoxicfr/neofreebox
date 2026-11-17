@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -40,7 +41,7 @@ Environment:
   NEOFREEBOX_DATA_DIR        where the account is kept (default ./data)
   NEOFREEBOX_BOX_URL         box URL (default ` + fbx.DefaultURL + `)
   NEOFREEBOX_APP_TOKEN_FILE  file holding the app token
-  NEOFREEBOX_READ_ONLY       1 to refuse every write to the box (demos, audits)
+  NEOFREEBOX_READ_ONLY       true to refuse every write to the box (demos, audits)
 `
 
 func main() {
@@ -160,7 +161,7 @@ func serve(ctx context.Context) error {
 	}
 	server.Version = version
 	var box server.Box = c
-	if os.Getenv("NEOFREEBOX_READ_ONLY") == "1" {
+	if ro, _ := strconv.ParseBool(os.Getenv("NEOFREEBOX_READ_ONLY")); ro {
 		box = readOnly{c}
 		log.Warn("read-only mode: no write is sent to the box")
 	}
@@ -237,7 +238,9 @@ func healthcheck(ctx context.Context) error {
 type readOnly struct{ *fbx.Client }
 
 func (b readOnly) Do(ctx context.Context, method, path string, in, out any) error {
-	if method == http.MethodGet || (method == http.MethodPost && strings.HasPrefix(path, "rrd/")) {
+	// vpn/download_config is a GET that regenerates an OpenVPN user's file.
+	read := method == http.MethodGet && !strings.HasPrefix(path, "vpn/download_config")
+	if read || (method == http.MethodPost && strings.HasPrefix(path, "rrd/")) {
 		return b.Client.Do(ctx, method, path, in, out)
 	}
 	return &fbx.Error{Status: http.StatusForbidden, Code: "read_only", Msg: "mode lecture seule : rien n'est envoyé à la box"}

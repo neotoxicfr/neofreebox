@@ -73,7 +73,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.account.check(user, pass) {
 		s.limiter.fail()
-		s.log.Warn("failed sign-in", "username", user)
+		s.log.Warn("failed sign-in")
 		s.render(w, http.StatusUnauthorized, "login", map[string]any{"Error": "Identifiant ou mot de passe incorrect.", "Username": user})
 		return
 	}
@@ -121,7 +121,12 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.sessions.dropAll()
+	// A stolen session could have created tokens: a new password ends them too.
+	if err := s.tokens.revokeAll(); err != nil {
+		s.log.Error("revoke tokens", "err", err)
+	}
 	s.startSession(w)
+	data = s.accountData()
 	data["Done"] = true
 	s.render(w, http.StatusOK, "account", data)
 }
@@ -174,13 +179,20 @@ func (s *Server) accountData() map[string]any {
 }
 
 func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
+	// Re-asking the password keeps a stolen session from minting a lasting key.
+	if !s.limiter.allow() || !s.account.check(s.account.Username, r.PostFormValue("password")) {
+		s.limiter.fail()
+		setFlash(w, "err:Mot de passe incorrect : le jeton n'a pas été créé.")
+		http.Redirect(w, r, "/account", http.StatusSeeOther)
+		return
+	}
 	name := formStr(r, "name")
 	if name == "" || utf8.RuneCountInString(name) > 64 {
 		setFlash(w, "err:Donne un nom au jeton (64 caractères au plus).")
 		http.Redirect(w, r, "/account", http.StatusSeeOther)
 		return
 	}
-	tok, err := s.tokens.create(name)
+	tok, err := s.tokens.create(name, formBool(r, "read_only"))
 	if err != nil {
 		s.log.Error("create token", "err", err)
 		http.Error(w, "Erreur interne", http.StatusInternalServerError)
@@ -193,10 +205,13 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
-	if err := s.tokens.revoke(r.PathValue("id")); err != nil {
+	switch found, err := s.tokens.revoke(r.PathValue("id")); {
+	case err != nil:
 		s.log.Error("revoke token", "err", err)
-		setFlash(w, "err:"+err.Error())
-	} else {
+		setFlash(w, "err:Le jeton n'a pas pu être révoqué.")
+	case !found:
+		setFlash(w, "err:Ce jeton n'existe plus.")
+	default:
 		setFlash(w, "ok:Jeton révoqué.")
 	}
 	http.Redirect(w, r, "/account", http.StatusSeeOther)

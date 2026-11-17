@@ -23,7 +23,7 @@ func init() {
 func newToken(t *testing.T, srvURL string, c *http.Client, post func(path string, form url.Values) *http.Response) string {
 	t.Helper()
 	post("/setup", creds("admin", "correct horse battery"))
-	req, _ := http.NewRequest(http.MethodPost, srvURL+"/account/tokens", strings.NewReader(url.Values{"name": {"ci"}}.Encode()))
+	req, _ := http.NewRequest(http.MethodPost, srvURL+"/account/tokens", strings.NewReader(url.Values{"name": {"ci"}, "password": {"correct horse battery"}}.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)
 	if err != nil {
@@ -100,5 +100,37 @@ func TestAPIAndMCP(t *testing.T) {
 	_ = json.Unmarshal([]byte(body), &rpc)
 	if code != http.StatusOK || !rpc.Result.IsError || !strings.Contains(body, "confirm") {
 		t.Fatalf("mcp dangerous call without confirm: %d %s", code, body)
+	}
+}
+
+func TestReadOnlyToken(t *testing.T) {
+	srv := newTestServer(t, fakeBox{})
+	c := browser(srv)
+	post(t, c, srv, "/setup", creds("admin", "correct horse battery"))
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/account/tokens", strings.NewReader(url.Values{
+		"name": {"ro"}, "read_only": {"1"}, "password": {"correct horse battery"}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	tok := regexp.MustCompile(`nfb_[A-Za-z0-9_-]+`).FindString(string(b))
+	api := srv.Client()
+	if code, _ := apiReq(t, api, http.MethodPost, srv.URL+"/api/v1/ops/test_system_get", tok, ""); code != http.StatusOK {
+		t.Fatalf("read with read-only token: %d", code)
+	}
+	if code, _ := apiReq(t, api, http.MethodPost, srv.URL+"/api/v1/ops/test_reboot", tok, `{"confirm":true}`); code != http.StatusForbidden {
+		t.Fatalf("write with read-only token: %d, want 403", code)
+	}
+	// A wrong password creates no token.
+	req, _ = http.NewRequest(http.MethodPost, srv.URL+"/account/tokens", strings.NewReader(url.Values{"name": {"x"}, "password": {"nope"}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, _ = c.Do(req)
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if regexp.MustCompile(`nfb_[A-Za-z0-9_-]+`).Match(b) {
+		t.Fatal("token created without the password")
 	}
 }
