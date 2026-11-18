@@ -34,3 +34,12 @@ document.addEventListener('click', (e) => {
     wrap.classList.toggle('scrolls', wrap.scrollWidth > wrap.clientWidth + 1);
   }
 }, true);
+
+// The window can narrow while a panel is open: measure the open ones again.
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.table-wrap').forEach((wrap) => {
+    if (wrap.querySelector('details.inline[open]')) {
+      wrap.classList.toggle('scrolls', wrap.scrollWidth > wrap.clientWidth + 1);
+    }
+  });
+});
