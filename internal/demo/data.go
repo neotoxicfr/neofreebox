@@ -61,7 +61,7 @@ func (b *Box) static(path string, now int64) (any, bool) {
 			"ipv4_port_range": L{0, 65535}, "rate_down": 2_350_000, "rate_up": 310_000, "bandwidth_down": 1_000_000_000, "bandwidth_up": 600_000_000,
 			"bytes_down": int64(7_412_000_000_000), "bytes_up": int64(1_102_000_000_000)}, true
 	case "connection/config/":
-		return M{"ping": true, "wol": false, "adblock": true, "adblock_not_set": false, "allow_token_request": false, "sip_alg": "disabled",
+		return M{"ping": true, "wol": false, "adblock": true, "adblock_not_set": false, "allow_token_request": false, "sip_alg": "any_media",
 			"remote_access": false, "remote_access_port": 8443, "remote_access_min_port": 8000, "remote_access_max_port": 9000,
 			"remote_access_ip": publicIP, "is_secure_pass": true, "api_remote_access": false, "api_domain": "demo.example.net",
 			"https_available": true, "https_port": 8443}, true

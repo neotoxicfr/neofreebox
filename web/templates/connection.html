@@ -65,12 +65,12 @@
     <label class="check"><input type="checkbox" name="allow_token_request" value="1"{{if .Cfg.AllowToken}} checked{{end}}> Autoriser de nouvelles applications à demander un jeton</label>
     <label>Compatibilité téléphonie SIP (SIP ALG)
       <select name="sip_alg">
-        <option value="disabled"{{if eq .Cfg.SIPALG "disabled"}} selected{{end}}>Désactivé</option>
-        <option value="direct_media"{{if eq .Cfg.SIPALG "direct_media"}} selected{{end}}>Média direct entre terminaux SIP</option>
-        <option value="any_media"{{if eq .Cfg.SIPALG "any_media"}} selected{{end}}>Média entre tous les appareils</option>
+        {{if eq .Cfg.SIPALG "disabled"}}<option value="disabled" selected>Désactivé</option>{{end}}
+        <option value="direct_media"{{if eq .Cfg.SIPALG "direct_media"}} selected{{end}}>Média direct entre terminaux SIP (le plus strict)</option>
+        <option value="any_media"{{if eq .Cfg.SIPALG "any_media"}} selected{{end}}>Média entre tous les appareils (réglage d'origine)</option>
       </select>
     </label>
-    <p class="hint">Laisse le SIP ALG désactivé sauf si un téléphone IP ou un softphone ne fonctionne pas derrière la box.</p>
+    <p class="hint">« Média direct » est le plus restrictif que la Freebox Pop accepte : elle refuse de désactiver complètement le SIP ALG. Garde « Média entre tous les appareils » si un téléphone IP ou un softphone ne fonctionne plus.</p>
     <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages changent ce que la box laisse passer depuis et vers internet.</label>
     <div class="actions"><button class="danger">Enregistrer</button></div>
   </form>
