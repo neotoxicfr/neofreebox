@@ -247,9 +247,10 @@ details.inline > form { padding: .9rem 1rem; border-radius: var(--r-sm); backgro
   width: max-content; max-width: min(26rem, calc(100vw - 2rem)); background: var(--surface); border: 1px solid var(--border);
   box-shadow: var(--pop-shadow); white-space: normal; }
 :is(td, .actions) > details.inline > form input:not([type="checkbox"]):not([type="radio"]) { width: 100%; }
-/* Let the panel overflow the table only where tables fit the width: a narrower table keeps its own
-   horizontal scroll (and the reader's scroll position) while a panel is open. */
-@media (min-width: 1100px) { .table-wrap:has(details[open]) { overflow: visible; } }
+/* An open panel may overflow its table, unless the table is wider than its frame (app.js marks it
+   .scrolls): that one keeps its horizontal scroll, and the panel opens in the flow of the row instead. */
+.table-wrap:has(details[open]):not(.scrolls) { overflow: visible; }
+.table-wrap.scrolls :is(td, .actions) > details.inline > :not(summary) { position: static; margin-top: .5rem; }
 /* A fold-out holding only the confirmation: the panel is the confirmation zone */
 details.inline > form:not(:has(> :not(.confirm, input[type="hidden"]))) { padding: 0; border: 0; background: none; }
 details.inline > form:not(:has(> :not(.confirm, input[type="hidden"]))) > .confirm { border-radius: var(--r-sm); }
