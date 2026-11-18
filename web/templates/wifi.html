@@ -5,15 +5,20 @@
 <p class="muted">Couper le Wi-Fi ou changer le nom, la clé, la sécurité ou le canal peut te déconnecter de la box. Si tu y accèdes par Wi-Fi, passe par un câble.</p>
 
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Wi-Fi</h2>
     <p class="big"><span class="badge{{if .Cfg.Enabled}} on{{end}}">{{if .State.State}}{{.State.Label}}{{else if .Cfg.Enabled}}activé{{else}}désactivé{{end}}</span></p>
     {{if .Cfg.Enabled}}
-    <form method="post" action="/wifi/enabled" class="stack">
-      <input type="hidden" name="enabled" value="0">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les appareils Wi-Fi, le mien compris, seront déconnectés.</label>
-      <button class="danger">Couper le Wi-Fi</button>
-    </form>
+    <details class="inline">
+      <summary class="ghost-btn danger">Couper le Wi-Fi…</summary>
+      <form method="post" action="/wifi/enabled" class="stack">
+        <input type="hidden" name="enabled" value="0">
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les appareils Wi-Fi, le mien compris, seront déconnectés.</label>
+          <button class="danger">Couper le Wi-Fi</button>
+        </div>
+      </form>
+    </details>
     {{else}}
     <form method="post" action="/wifi/enabled"><input type="hidden" name="enabled" value="1"><button>Activer le Wi-Fi</button></form>
     {{end}}
@@ -57,8 +62,10 @@
         </label>
         <label>Durée (min)<input type="number" name="minutes" value="20" min="1" max="1440" required></label>
       </div>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les autres bandes seront coupées pendant ce temps.</label>
-      <button class="danger">Couper les autres bandes</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les autres bandes seront coupées pendant ce temps.</label>
+        <button class="danger">Couper les autres bandes</button>
+      </div>
     </form>
     {{end}}
   </section>
@@ -83,15 +90,19 @@
           <label class="check"><input type="checkbox" name="dfs_enabled" value="1"{{if .Config.DFS}} checked{{end}}> Autoriser les canaux partagés avec les radars (DFS)</label>
           <p class="hint">DFS : plus de canaux libres en 5 GHz, mais la radio peut changer de canal quand un radar est détecté.</p>
           <p class="hint">Les combinaisons permises sont listées dans <a href="/wifi-radar?ap={{.ID}}">Voisinage</a>.</p>
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande peuvent être déconnectés.</label>
-          <button class="small danger">Enregistrer</button>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande peuvent être déconnectés.</label>
+            <button class="small danger">Enregistrer</button>
+          </div>
         </form>
       </details>
       <details class="inline">
         <summary class="ghost-btn">Redémarrer<span class="sr-only"> la radio {{.Label}}</span></summary>
         <form method="post" action="/wifi/ap/{{.ID}}/restart" class="stack">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande seront déconnectés un moment.</label>
-          <button class="small danger">Redémarrer la radio</button>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils de cette bande seront déconnectés un moment.</label>
+            <button class="small danger">Redémarrer la radio</button>
+          </div>
         </form>
       </details>
     </div>
@@ -128,8 +139,10 @@
               <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Config.Enabled}} checked{{end}}> Réseau activé</label>
               <label class="check"><input type="checkbox" name="hide_ssid" value="1"{{if .Config.HideSSID}} checked{{end}}> Masquer le nom</label>
               {{if .UseShared}}<p class="hint">Ce réseau suit les réglages partagés entre les bandes.</p>{{end}}
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils connectés à ce réseau peuvent être déconnectés.</label>
-              <button class="small danger">Enregistrer</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils connectés à ce réseau peuvent être déconnectés.</label>
+                <button class="small danger">Enregistrer</button>
+              </div>
             </form>
           </details>
         </div>
@@ -159,8 +172,10 @@
             <summary class="ghost-btn">Corriger<span class="sr-only"> : {{.Target}}, {{.Label}}</span></summary>
             <form method="post" action="/wifi/diag/fix" class="stack">
               <input type="hidden" name="target" value="{{.Ref}}"><input type="hidden" name="code" value="{{.Code}}">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage change et peut déconnecter des appareils.</label>
-              <button class="small danger">Appliquer le correctif</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage change et peut déconnecter des appareils.</label>
+                <button class="small danger">Appliquer le correctif</button>
+              </div>
             </form>
           </details>
         </div>
@@ -178,8 +193,10 @@
   <details class="inline">
     <summary class="ghost-btn danger">Réinitialiser le Wi-Fi…</summary>
     <form method="post" action="/wifi/reset" class="stack">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le Wi-Fi revient aux réglages d'usine et que tous les appareils seront déconnectés.</label>
-      <button class="danger">Remettre le Wi-Fi par défaut</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le Wi-Fi revient aux réglages d'usine et que tous les appareils seront déconnectés.</label>
+        <button class="danger">Remettre le Wi-Fi par défaut</button>
+      </div>
     </form>
   </details>
 </section>

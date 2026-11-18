@@ -19,8 +19,10 @@
         <details class="inline">
           <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Name "la cible sans nom"}}</span></summary>
           <form method="post" action="/diagnostics/targets/{{.ID}}/delete" class="stack">
-            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil ne recevra plus les alertes de la box.</label>
-            <button class="small danger">Supprimer définitivement</button>
+            <div class="confirm">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil ne recevra plus les alertes de la box.</label>
+              <button class="small danger">Supprimer définitivement</button>
+            </div>
           </form>
         </details>
       </td>

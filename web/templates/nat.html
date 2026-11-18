@@ -24,15 +24,19 @@
             <summary class="ghost-btn">Activer<span class="sr-only"> la redirection du port {{.WanPorts}}</span></summary>
             <form method="post" action="/nat/redir/{{.ID}}/enabled" class="stack">
               <input type="hidden" name="enabled" value="1">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
-              <button class="small">Activer la redirection</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
+                <button class="small">Activer la redirection</button>
+              </div>
             </form>
           </details>
           {{end}}
           <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> la redirection du port {{.WanPorts}}</span></summary>
             <form method="post" action="/nat/redir/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le service redirigé ne sera plus joignable depuis internet.</label>
-              <button class="danger small">Supprimer définitivement</button></form></details>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le service redirigé ne sera plus joignable depuis internet.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div></form></details>
         </div>
       </td>
     </tr>
@@ -54,8 +58,10 @@
         <label class="grow">Source autorisée<input name="src_ip" inputmode="decimal" placeholder="toutes (0.0.0.0)"></label>
       </div>
       <label>Commentaire<input name="comment" maxlength="64"></label>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
-      <div><button class="small">Ajouter</button></div>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce port sera joignable depuis internet.</label>
+        <button class="small">Ajouter</button>
+      </div>
     </form>
   </details>
 </section>
@@ -67,8 +73,10 @@
   <form method="post" action="/nat/dmz" class="stack">
     <input type="hidden" name="enabled" value="1">
     <label>Adresse IP de l'appareil<input name="ip" value="{{.DMZ.IP}}" required inputmode="decimal" placeholder="192.168.1.42"></label>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil sera entièrement exposé à internet.</label>
-    <button class="danger">{{if .DMZ.Enabled}}Appliquer{{else}}Activer la DMZ{{end}}</button>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil sera entièrement exposé à internet.</label>
+      <button class="danger">{{if .DMZ.Enabled}}Appliquer{{else}}Activer la DMZ{{end}}</button>
+    </div>
   </form>
   {{if .DMZ.Enabled}}
   <form method="post" action="/nat/dmz"><input type="hidden" name="enabled" value="0"><button class="ghost">Désactiver la DMZ</button></form>
@@ -82,12 +90,15 @@
   <form method="post" action="/nat/upnp" class="stack">
     <input type="hidden" name="enabled" value="1">
     <label>Version<select name="version"><option value="1"{{if eq .UPnP.Version 1}} selected{{end}}>1</option><option value="2"{{if eq .UPnP.Version 2}} selected{{end}}>2</option></select></label>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout appareil du réseau pourra ouvrir des ports vers internet.</label>
-    <button class="danger">{{if .UPnP.Enabled}}Appliquer{{else}}Activer l'UPnP{{end}}</button>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout appareil du réseau pourra ouvrir des ports vers internet.</label>
+      <div class="row">
+        <button class="danger">{{if .UPnP.Enabled}}Appliquer{{else}}Activer l'UPnP{{end}}</button>
+        {{if .UPnP.Enabled}}<button class="ghost" form="upnp-off">Désactiver l'UPnP</button>{{end}}
+      </div>
+    </div>
   </form>
-  {{if .UPnP.Enabled}}
-  <form method="post" action="/nat/upnp"><input type="hidden" name="enabled" value="0"><button class="ghost">Désactiver l'UPnP</button></form>
-  {{end}}
+  {{if .UPnP.Enabled}}<form id="upnp-off" method="post" action="/nat/upnp" hidden><input type="hidden" name="enabled" value="0"></form>{{end}}
 </section>
 </div>
 
@@ -107,8 +118,10 @@
       <td>
         <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> la redirection UPnP du port {{.ExtPort}}</span></summary>
           <form method="post" action="/nat/upnp/redir/{{.ID}}/delete" class="stack">
-            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'appareil qui l'a ouverte pourra la rouvrir.</label>
-            <button class="danger small">Supprimer définitivement</button></form></details>
+            <div class="confirm">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'appareil qui l'a ouverte pourra la rouvrir.</label>
+              <button class="danger small">Supprimer définitivement</button>
+            </div></form></details>
       </td>
     </tr>
     {{end}}
@@ -136,8 +149,10 @@
             <form method="post" action="/nat/incoming/{{.ID}}" class="stack">
               <input type="hidden" name="enabled" value="1">
               {{if not .ReadOnly}}<label>Port<input name="in_port" type="number" min="{{.MinPort}}" max="{{.MaxPort}}" value="{{.InPort}}"></label>{{end}}
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce service sera joignable depuis internet.</label>
-              <button class="small">{{if .Enabled}}Enregistrer{{else}}Ouvrir le port{{end}}</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce service sera joignable depuis internet.</label>
+                <button class="small">{{if .Enabled}}Enregistrer{{else}}Ouvrir le port{{end}}</button>
+              </div>
             </form>
           </details>
         </div>

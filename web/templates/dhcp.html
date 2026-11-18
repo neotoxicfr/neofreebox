@@ -7,11 +7,16 @@
   <h2>Serveur DHCP IPv4 <span class="badge{{if .Config.Enabled}} on{{end}}">{{if .Config.Enabled}}activé{{else}}désactivé{{end}}</span></h2>
   <p class="muted">Passerelle <span class="mono">{{.Config.Gateway}}</span>, masque <span class="mono">{{.Config.Netmask}}</span>.</p>
   {{if .Config.Enabled}}
-  <form method="post" action="/dhcp/enabled" class="stack">
-    <input type="hidden" name="enabled" value="0">
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils sans adresse fixe perdront le réseau.</label>
-    <button class="danger">Désactiver le DHCP</button>
-  </form>
+  <details class="inline">
+    <summary class="ghost-btn danger">Désactiver le DHCP…</summary>
+    <form method="post" action="/dhcp/enabled" class="stack">
+      <input type="hidden" name="enabled" value="0">
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les appareils sans adresse fixe perdront le réseau.</label>
+        <button class="danger">Désactiver le DHCP</button>
+      </div>
+    </form>
+  </details>
   {{else}}
   <form method="post" action="/dhcp/enabled"><input type="hidden" name="enabled" value="1"><button>Activer le DHCP</button></form>
   {{end}}
@@ -25,11 +30,16 @@
     <div><button class="ghost">Enregistrer le réglage DNS</button></div>
   </form>
   {{if .V6.Enabled}}
-  <form method="post" action="/dhcp/v6/enabled" class="stack">
-    <input type="hidden" name="enabled" value="0">
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'IPv6 peut cesser de fonctionner sur certains appareils.</label>
-    <button class="danger">Désactiver le DHCPv6</button>
-  </form>
+  <details class="inline">
+    <summary class="ghost-btn danger">Désactiver le DHCPv6…</summary>
+    <form method="post" action="/dhcp/v6/enabled" class="stack">
+      <input type="hidden" name="enabled" value="0">
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'IPv6 peut cesser de fonctionner sur certains appareils.</label>
+        <button class="danger">Désactiver le DHCPv6</button>
+      </div>
+    </form>
+  </details>
   {{else}}
   <form method="post" action="/dhcp/v6/enabled" class="stack">
     <input type="hidden" name="enabled" value="1">
@@ -58,8 +68,10 @@
     <label class="check"><input type="checkbox" name="sticky_assign" value="1"{{if .Config.StickyAssign}} checked{{end}}> Toujours attribuer la même adresse à un appareil</label>
     <label class="check"><input type="checkbox" name="always_broadcast" value="1"{{if .Config.AlwaysBroadcast}} checked{{end}}> Toujours répondre en diffusion</label>
     <label class="check"><input type="checkbox" name="ignore_out_of_range_hint" value="1"{{if .Config.IgnoreOutOfRangeHint}} checked{{end}}> Ignorer l'adresse demandée si elle est hors plage</label>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages sont distribués à tous les appareils du réseau.</label>
-    <div><button class="danger">Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages sont distribués à tous les appareils du réseau.</label>
+      <button class="danger">Enregistrer</button>
+    </div>
   </form>
 </section>
 
@@ -87,8 +99,10 @@
           </details>
           <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> le bail {{.IP}}</span></summary>
             <form method="post" action="/dhcp/static/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil pourra recevoir une autre adresse.</label>
-              <button class="danger small">Supprimer définitivement</button></form></details>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appareil pourra recevoir une autre adresse.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div></form></details>
         </div>
       </td>
     </tr>

@@ -18,8 +18,10 @@
     <details class="inline">
       <summary class="ghost-btn danger">Tout supprimer</summary>
       <form method="post" action="/calls/delete-all" class="stack">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le journal d'appels sera effacé définitivement.</label>
-        <button class="small danger">Vider le journal</button>
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le journal d'appels sera effacé définitivement.</label>
+          <button class="small danger">Vider le journal</button>
+        </div>
       </form>
     </details>
     {{end}}
@@ -40,8 +42,10 @@
           {{if .New}}<form method="post" action="/calls/{{.ID}}/read"><button class="ghost small">Marquer comme lu<span class="sr-only"> : appel de {{.Who}}</span></button></form>{{end}}
           <details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> l'appel de {{.Who}}</span></summary>
             <form method="post" action="/calls/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appel sera effacé définitivement.</label>
-              <button class="danger small">Supprimer définitivement</button></form></details>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet appel sera effacé définitivement.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div></form></details>
         </div>
       </td>
     </tr>
@@ -72,8 +76,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> le message de {{or .PhoneNumber "numéro masqué"}}</span></summary>
             <form method="post" action="/calls/voicemail/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce message sera effacé définitivement.</label>
-              <button class="small danger">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce message sera effacé définitivement.</label>
+                <button class="small danger">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>

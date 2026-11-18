@@ -33,8 +33,10 @@
             <option value="full"{{if eq .Config.Duplex "full"}} selected{{end}}>Duplex intégral</option>
           </select>
         </label>
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode non pris en charge par l'appareil branché coupe la liaison.</label>
-        <button class="danger small">Enregistrer</button>
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode non pris en charge par l'appareil branché coupe la liaison.</label>
+          <button class="danger small">Enregistrer</button>
+        </div>
       </form>
     </details>
   </section>

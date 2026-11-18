@@ -23,3 +23,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// A table wider than its frame keeps its horizontal scroll when a row's panel
+// opens (see .table-wrap.scrolls in app.css). Measured on the click that opens
+// it (Enter and Space on a summary click too), before the layout changes.
+document.addEventListener('click', (e) => {
+  const summary = e.target.closest && e.target.closest('details.inline > summary');
+  const wrap = summary && summary.closest('.table-wrap');
+  if (wrap && !summary.parentElement.open) {
+    wrap.classList.toggle('scrolls', wrap.scrollWidth > wrap.clientWidth + 1);
+  }
+}, true);
+
+// The window can narrow while a panel is open: measure the open ones again.
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.table-wrap').forEach((wrap) => {
+    if (wrap.querySelector('details.inline[open]')) {
+      wrap.classList.toggle('scrolls', wrap.scrollWidth > wrap.clientWidth + 1);
+    }
+  });
+});

@@ -36,8 +36,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Name}}</span></summary>
             <form method="post" action="/recordings/programmed/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'enregistrement programmé « {{.Name}} » sera annulé (arrêté s'il est en cours).</label>
-              <button class="danger small">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'enregistrement programmé « {{.Name}} » sera annulé (arrêté s'il est en cours).</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>
@@ -93,8 +95,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Name}}</span></summary>
             <form method="post" action="/recordings/finished/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la vidéo « {{.Name}} » sera effacée du disque, sans retour possible.</label>
-              <button class="small danger">Supprimer définitivement la vidéo</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la vidéo « {{.Name}} » sera effacée du disque, sans retour possible.</label>
+                <button class="small danger">Supprimer définitivement la vidéo</button>
+              </div>
             </form>
           </details>
         </div>
@@ -108,7 +112,7 @@
 </section>
 
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Marges</h2>
     <form method="post" action="/recordings/config" class="stack">
       <label>Avant le début (minutes)<input type="number" name="margin_before" min="0" max="120" value="{{.Config.MarginBefore}}" required></label>

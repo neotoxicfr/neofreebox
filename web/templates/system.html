@@ -3,7 +3,7 @@
 <h1>Box</h1>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Informations</h2>
     <dl>
       <dt>Modèle</dt><dd>{{.Sys.ModelInfo.PrettyName}}</dd>
@@ -48,14 +48,24 @@
 
   <section class="card">
     <h2>Redémarrer ou éteindre</h2>
-    <form method="post" action="/system/reboot" class="stack">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le réseau sera coupé quelques minutes.</label>
-      <button class="danger">Redémarrer la Freebox</button>
-    </form>
-    <form method="post" action="/system/shutdown" class="stack section">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la box restera éteinte jusqu'à ce que je la rallume à la main.</label>
-      <button class="danger">Éteindre la Freebox</button>
-    </form>
+    <details class="inline">
+      <summary class="ghost-btn danger">Redémarrer la Freebox…</summary>
+      <form method="post" action="/system/reboot" class="stack">
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le réseau sera coupé quelques minutes.</label>
+          <button class="danger">Redémarrer la Freebox</button>
+        </div>
+      </form>
+    </details>
+    <details class="inline">
+      <summary class="ghost-btn danger">Éteindre la Freebox…</summary>
+      <form method="post" action="/system/shutdown" class="stack">
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la box restera éteinte jusqu'à ce que je la rallume à la main.</label>
+          <button class="danger">Éteindre la Freebox</button>
+        </div>
+      </form>
+    </details>
   </section>
 </div>
 {{end}}
