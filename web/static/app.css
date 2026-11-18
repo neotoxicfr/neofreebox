@@ -180,6 +180,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--link); }
 .check { flex-direction: row; align-items: center; gap: .6rem; font-weight: 400; min-height: 24px; }
 .check input { min-height: 0; width: 1.2rem; height: 1.2rem; margin: 0; flex: none; accent-color: var(--link); }
 .row { display: flex; gap: .75rem; align-items: flex-end; flex-wrap: wrap; }
+/* A field with help text under it would rise above its neighbours: align the
+   labels by their top instead, and keep buttons on the fields' baseline. */
+.row:has(> label > .hint) { align-items: flex-start; }
 .grow { flex: 1; min-width: min(12rem, 100%); }
 button { font: inherit; font-weight: 650; cursor: pointer; border: 1px solid transparent; border-radius: 999px;
   padding: .55rem 1.25rem; min-height: 44px; background: var(--accent); color: var(--accent-text); }
