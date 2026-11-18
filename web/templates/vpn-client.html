@@ -45,8 +45,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Activer<span class="sr-only"> {{or .Description .ID}}</span></summary>
             <form method="post" action="/vpn-client/{{.ID}}/activate" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le trafic de la box partira dans le tunnel, et que l'accès à distance peut être coupé si le VPN ne fonctionne pas.</label>
-              <button class="danger small">Activer « {{or .Description .ID}} »</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tout le trafic de la box partira dans le tunnel, et que l'accès à distance peut être coupé si le VPN ne fonctionne pas.</label>
+                <button class="danger small">Activer « {{or .Description .ID}} »</button>
+              </div>
             </form>
           </details>
           {{end}}
@@ -60,8 +62,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Description .ID}}</span></summary>
             <form method="post" action="/vpn-client/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette configuration{{if .Active}} (active : le tunnel sera coupé){{end}} sera supprimée.</label>
-              <button class="danger small">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette configuration{{if .Active}} (active : le tunnel sera coupé){{end}} sera supprimée.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>

@@ -12,8 +12,10 @@
     {{else}}
     <form method="post" action="/wifi-wps/config" class="stack">
       <input type="hidden" name="enabled" value="1">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le WPS facilite l'accès au Wi-Fi à qui est près de la box.</label>
-      <button class="danger">Activer le WPS</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le WPS facilite l'accès au Wi-Fi à qui est près de la box.</label>
+        <button class="danger">Activer le WPS</button>
+      </div>
     </form>
     {{end}}
   </section>
@@ -43,8 +45,10 @@
             <summary class="ghost-btn">Démarrer<span class="sr-only"> une session sur {{.SSID}}</span></summary>
             <form method="post" action="/wifi-wps/start" class="stack">
               <input type="hidden" name="bssid" value="{{.BSSID}}">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un appareil proche pourra rejoindre ce réseau sans la clé tant que la session est ouverte.</label>
-              <button class="small danger">Ouvrir la session</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un appareil proche pourra rejoindre ce réseau sans la clé tant que la session est ouverte.</label>
+                <button class="small danger">Ouvrir la session</button>
+              </div>
             </form>
           </details>
         </div>
@@ -76,8 +80,10 @@
   <details class="inline section">
     <summary class="ghost-btn danger">Effacer l'historique<span class="sr-only"> des sessions WPS</span></summary>
     <form method="post" action="/wifi-wps/clear" class="stack">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'historique des sessions WPS sera effacé.</label>
-      <button class="danger small">Supprimer définitivement</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'historique des sessions WPS sera effacé.</label>
+        <button class="danger small">Supprimer définitivement</button>
+      </div>
     </form>
   </details>
   {{else}}<p class="empty">Aucune session.</p>{{end}}

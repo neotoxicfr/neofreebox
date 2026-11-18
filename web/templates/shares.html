@@ -14,16 +14,23 @@
     <label>Groupe de travail<input name="workgroup" value="{{.Samba.Workgroup}}" maxlength="15"></label>
     <label>Utilisateur<input name="logon_user" value="{{.Samba.LogonUser}}" autocomplete="off"></label>
     <label>Nouveau mot de passe<input type="password" name="logon_password" autocomplete="new-password" placeholder="Inchangé"></label>
-    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un partage sans identifiant est ouvert à tous les appareils du réseau (case requise dans ce cas).</label>
-    <button>Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un partage sans identifiant est ouvert à tous les appareils du réseau (case requise dans ce cas).</label>
+      <button>Enregistrer</button>
+    </div>
   </form>
   <h3>Protocole</h3>
   {{if .Samba.SMBv2}}
   <p class="muted">SMBv2/v3 est actif (recommandé).</p>
-  <form method="post" action="/shares/samba/smb" class="stack">
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que SMBv1 est un protocole ancien et vulnérable, qui expose mes fichiers.</label>
-    <div class="actions"><button class="danger">Passer en SMBv1</button></div>
-  </form>
+  <details class="inline">
+    <summary class="ghost-btn danger">Passer en SMBv1…</summary>
+    <form method="post" action="/shares/samba/smb" class="stack">
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que SMBv1 est un protocole ancien et vulnérable, qui expose mes fichiers.</label>
+        <button class="danger">Passer en SMBv1</button>
+      </div>
+    </form>
+  </details>
   {{else}}
   <p class="error">SMBv1 est actif : protocole ancien et vulnérable.</p>
   <form method="post" action="/shares/samba/smb"><input type="hidden" name="smbv2" value="1"><button>Réactiver SMBv2/v3</button></form>
@@ -40,8 +47,10 @@
     <label>Icône dans le Finder
       <select name="server_type">{{$cur := .Afp.ServerType}}{{range .AfpTypes}}<option value="{{.}}"{{if eq . $cur}} selected{{end}}>{{.}}</option>{{end}}</select>
     </label>
-    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'accès invité ouvre le partage à tous les appareils du réseau (case requise dans ce cas).</label>
-    <button>Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'accès invité ouvre le partage à tous les appareils du réseau (case requise dans ce cas).</label>
+      <button>Enregistrer</button>
+    </div>
   </form>
 </section>
 
@@ -51,8 +60,10 @@
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Ftp.Enabled}} checked{{end}}> Activer le serveur FTP</label>
     <p class="muted">Utilisateur : <span class="mono">{{.Ftp.Username}}</span>{{if .Ftp.WeakPassword}} · mot de passe faible (l'accès distant est refusé){{end}}</p>
     <label>Nouveau mot de passe<input type="password" name="password" autocomplete="new-password" placeholder="Inchangé"></label>
-    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'activation du FTP publie les fichiers avec l'accès déjà réglé ci-dessous (case requise pour activer).</label>
-    <button>Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'activation du FTP publie les fichiers avec l'accès déjà réglé ci-dessous (case requise pour activer).</label>
+      <button>Enregistrer</button>
+    </div>
   </form>
   <h3>Accès depuis l'extérieur</h3>
   {{if .Ftp.Exposed}}<p class="error">Le FTP est ouvert{{if .Ftp.Remote}} depuis internet{{end}}{{if .Ftp.Anonymous}}{{if .Ftp.Remote}} et{{end}} sans mot de passe{{end}}.</p>{{end}}
@@ -64,8 +75,10 @@
       <label class="grow">Port de contrôle<input type="number" name="port_ctrl" min="1" max="65535" value="{{.Ftp.PortCtrl}}"></label>
       <label class="grow">Port de données<input type="number" name="port_data" min="1" max="65535" value="{{.Ftp.PortData}}"></label>
     </div>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'accès distant ou anonyme expose mes fichiers à n'importe qui.</label>
-    <div class="actions"><button class="danger">Enregistrer l'accès</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'accès distant ou anonyme expose mes fichiers à n'importe qui.</label>
+      <button class="danger">Enregistrer l'accès</button>
+    </div>
   </form>
 </section>
 
@@ -75,8 +88,10 @@
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Tftp.Enabled}} checked{{end}}> Activer le serveur TFTP</label>
     <label>Dossier racine<input name="root" value="{{.Tftp.Path}}" class="mono" required placeholder="/Freebox/tftp"></label>
     <p class="hint">Chemin absolu d'un dossier du disque de la box.</p>
-    <div class="actions"><label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que le TFTP n'a pas de mot de passe : tout le dossier est lisible sur le réseau (case requise pour activer).</label>
-    <button>Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que le TFTP n'a pas de mot de passe : tout le dossier est lisible sur le réseau (case requise pour activer).</label>
+      <button>Enregistrer</button>
+    </div>
   </form>
 </section>
 

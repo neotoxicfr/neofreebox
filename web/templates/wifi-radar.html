@@ -65,8 +65,10 @@
     <summary class="ghost-btn">Relancer l'analyse</summary>
     <form method="post" action="/wifi-radar/scan" class="stack">
       <input type="hidden" name="ap" value="{{.Sel.ID}}">
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{.Sel.Label}} est indisponible pendant l'analyse.</label>
-      <button class="small danger">Lancer l'analyse</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la radio {{.Sel.Label}} est indisponible pendant l'analyse.</label>
+        <button class="small danger">Lancer l'analyse</button>
+      </div>
     </form>
   </details>
 </section>

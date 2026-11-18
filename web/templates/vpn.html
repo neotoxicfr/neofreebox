@@ -20,16 +20,20 @@
       <details class="inline">
         <summary class="ghost-btn danger">Arrêter<span class="sr-only"> {{.Label}}</span></summary>
         <form method="post" action="/vpn/{{.Name}}/stop" class="stack">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les clients connectés seront déconnectés et ne pourront plus se reconnecter.</label>
-          <button class="danger small">Arrêter le serveur</button>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les clients connectés seront déconnectés et ne pourront plus se reconnecter.</label>
+            <button class="danger small">Arrêter le serveur</button>
+          </div>
         </form>
       </details>
       {{else}}
       <details class="inline">
         <summary class="ghost-btn">Démarrer<span class="sr-only"> {{.Label}}</span></summary>
         <form method="post" action="/vpn/{{.Name}}/start" class="stack">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le serveur sera joignable depuis Internet : toute personne ayant un compte VPN pourra accéder à ton réseau local.</label>
-          <button class="small">Démarrer le serveur</button>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le serveur sera joignable depuis Internet : toute personne ayant un compte VPN pourra accéder à ton réseau local.</label>
+            <button class="small">Démarrer le serveur</button>
+          </div>
         </form>
       </details>
       {{end}}
@@ -47,8 +51,10 @@
     <form method="post" action="/vpn/{{$srv.Name}}/port" class="stack">
       <label>Nouveau port<input type="number" name="port" value="{{.Port}}" min="1" max="65535" required></label>
       <p class="hint">Les clients déjà configurés visent l'ancien port : il faudra mettre à jour leur configuration.</p>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les clients seront coupés tant que leur configuration n'est pas mise à jour.</label>
-      <button class="danger small">Changer le port</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les clients seront coupés tant que leur configuration n'est pas mise à jour.</label>
+        <button class="danger small">Changer le port</button>
+      </div>
     </form>
   </details>
   {{end}}
@@ -57,8 +63,10 @@
     <input type="hidden" name="type" value="wireguard">
     <label>MTU<input type="number" name="mtu" value="{{.ConfWG.MTU}}" min="512" max="1420" required></label>
     <p class="hint">Taille maximale des paquets (MTU) : laisse la valeur par défaut sauf problème de connexion.</p>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
-    <button class="small">Enregistrer</button>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
+      <button class="small">Enregistrer</button>
+    </div>
   </form>
   {{else if eq $srv.Type "openvpn"}}
   <form method="post" action="/vpn/{{$srv.Name}}/settings" class="row">
@@ -74,8 +82,10 @@
     </label>
     <label class="check"><input type="checkbox" name="use_tcp" value="1"{{if .ConfOpenVPN.UseTCP}} checked{{end}}> TCP au lieu d'UDP</label>
     <label class="check"><input type="checkbox" name="disable_fragment" value="1"{{if .ConfOpenVPN.DisableFragment}} checked{{end}}> Désactiver la fragmentation</label>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
-    <button class="small">Enregistrer</button>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés.</label>
+      <button class="small">Enregistrer</button>
+    </div>
   </form>
   {{else if eq $srv.Type "pptp"}}
   <form method="post" action="/vpn/{{$srv.Name}}/settings" class="row">
@@ -92,8 +102,10 @@
     <label class="check"><input type="checkbox" name="chap" value="1"{{if index .ConfPPTP.AllowedAuth "chap"}} checked{{end}}> CHAP</label>
     <label class="check"><input type="checkbox" name="mschapv2" value="1"{{if index .ConfPPTP.AllowedAuth "mschapv2"}} checked{{end}}> MS-CHAPv2</label>
     <p class="hint">PAP envoie le mot de passe en clair et PPTP est un protocole ancien : préfère WireGuard ou OpenVPN.</p>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés ou affaiblir la sécurité du serveur.</label>
-    <button class="small">Enregistrer</button>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce réglage peut couper les clients connectés ou affaiblir la sécurité du serveur.</label>
+      <button class="small">Enregistrer</button>
+    </div>
   </form>
   {{else}}
   <p class="muted">Pas de réglage modifiable ici pour ce serveur.</p>
@@ -130,8 +142,10 @@
             {{$login := .Login}}
             {{range $.OpenVPN}}
             <form method="post" action="/vpn/config/{{.}}/{{$login}}" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'ancien fichier de « {{$login}} » cessera de fonctionner.</label>
-              <button class="small">Télécharger ({{.}})</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que l'ancien fichier de « {{$login}} » cessera de fonctionner.</label>
+                <button class="small">Télécharger ({{.}})</button>
+              </div>
             </form>
             {{end}}
           </details>
@@ -147,15 +161,19 @@
               <label>IP réservée<input name="ip_reservation" value="{{.IPReservation}}"></label>
               <label>Nouveau mot de passe<input type="password" name="password" minlength="8" maxlength="32" autocomplete="new-password"></label>
               {{end}}
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cela peut couper les appareils de « {{.Login}} » ou changer leur accès au réseau.</label>
-              <button class="small">Enregistrer</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cela peut couper les appareils de « {{.Login}} » ou changer leur accès au réseau.</label>
+                <button class="small">Enregistrer</button>
+              </div>
             </form>
           </details>
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.Login}}</span></summary>
             <form method="post" action="/vpn/users/{{.Login}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.Login}} » ne pourra plus se connecter et que son fichier de configuration sera perdu.</label>
-              <button class="danger small">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.Login}} » ne pourra plus se connecter et que son fichier de configuration sera perdu.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>
@@ -186,8 +204,10 @@
         <label class="check"><input type="checkbox" name="psk" value="1"> Clé pré-partagée</label>
       </div>
       <p class="hint">WireGuard : IP réservée obligatoire, dans la plage {{.Pool.IPStart}} – {{.Pool.IPEnd}}. Mot de passe : pour les autres types seulement.</p>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet utilisateur pourra accéder à ton réseau local depuis Internet tant qu'un serveur VPN est en marche.</label>
-      <button class="small">Ajouter</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cet utilisateur pourra accéder à ton réseau local depuis Internet tant qu'un serveur VPN est en marche.</label>
+        <button class="small">Ajouter</button>
+      </div>
     </form>
   </details>
 </section>
@@ -212,8 +232,10 @@
         <details class="inline">
           <summary class="ghost-btn danger">Fermer<span class="sr-only"> la connexion de {{.User}}</span></summary>
           <form method="post" action="/vpn/connections/{{.ID}}/close" class="stack">
-            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.User}} » sera déconnecté.</label>
-            <button class="danger small">Fermer la connexion</button>
+            <div class="confirm">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que « {{.User}} » sera déconnecté.</label>
+              <button class="danger small">Fermer la connexion</button>
+            </div>
           </form>
         </details>
       </td>

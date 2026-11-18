@@ -34,8 +34,10 @@
               <label>Mode de vérification
                 <select name="checkmode"><option value="ro">Lecture seule (sans risque)</option><option value="rw">Réparer (démonte la partition)</option></select>
               </label>
-              <label class="check"><input type="checkbox" name="confirm" value="1"> Pour « Réparer » : je comprends que la partition sera démontée et que les services qui l'utilisent seront coupés.</label>
-              <button class="small">Lancer la vérification</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1"> Pour « Réparer » : je comprends que la partition sera démontée et que les services qui l'utilisent seront coupés.</label>
+                <button class="small">Lancer la vérification</button>
+              </div>
             </form>
           </details>
           {{if eq .State "mounted"}}
@@ -43,8 +45,10 @@
             <summary class="ghost-btn danger">Démonter<span class="sr-only"> {{or .Label "la partition"}}</span></summary>
             <form method="post" action="/storage/partitions/{{.ID}}/state" class="stack">
               <input type="hidden" name="state" value="umounted">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les services qui utilisent cette partition seront coupés.</label>
-              <button class="small danger">Démonter la partition</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les services qui utilisent cette partition seront coupés.</label>
+                <button class="small danger">Démonter la partition</button>
+              </div>
             </form>
           </details>
           {{else if eq .State "umounted"}}
@@ -67,8 +71,10 @@
       <summary class="ghost-btn danger">Éjecter<span class="sr-only"> {{or .Model "le disque"}}</span></summary>
       <form method="post" action="/storage/disks/{{.ID}}/state" class="stack">
         <input type="hidden" name="state" value="disabled">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le disque sera démonté et inaccessible.</label>
-        <button class="small danger">Éjecter</button>
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le disque sera démonté et inaccessible.</label>
+          <button class="small danger">Éjecter</button>
+        </div>
       </form>
     </details>
     {{else if eq .State "disabled"}}
@@ -82,8 +88,10 @@
           <label>Système<select name="fs_type"><option value="ext4">ext4</option><option value="exfat">exFAT</option><option value="vfat">FAT32</option><option value="ntfs">NTFS</option></select></label>
           <label class="grow">Nom<input name="label" maxlength="32"></label>
         </div>
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toutes les données du disque seront effacées.</label>
-        <button class="small danger">Formater définitivement</button>
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toutes les données du disque seront effacées.</label>
+          <button class="small danger">Formater définitivement</button>
+        </div>
       </form>
     </details>
   </div>

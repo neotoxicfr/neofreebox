@@ -26,8 +26,10 @@
       </label>
       <p class="hint">En mode pont, la plupart des services de la box (DHCP, Wi-Fi, redirections…) sont désactivés.</p>
       <label>Adresse IP de la box<input class="mono" name="ip" value="{{.IP}}" required inputmode="decimal" pattern="[0-9.]+"></label>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que changer le mode ou l'adresse de la box peut me couper l'accès à son interface.</label>
-      <div class="actions"><button class="danger">Enregistrer</button></div>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que changer le mode ou l'adresse de la box peut me couper l'accès à son interface.</label>
+        <button class="danger">Enregistrer</button>
+      </div>
     </form>
   </section>
 </div>
@@ -49,8 +51,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la route {{$r.Prefix}}</span></summary>
             <form method="post" action="/lan/routes/{{$i}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que supprimer une route peut couper l'accès à ce réseau.</label>
-              <button class="danger small">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que supprimer une route peut couper l'accès à ce réseau.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </td>
@@ -66,8 +70,10 @@
       <label>Préfixe (CIDR)<input class="mono" name="prefix" placeholder="192.168.42.0/24" required></label>
       <label>Passerelle<input class="mono" name="gateway" placeholder="192.168.1.38" required></label>
       <label>Description<input name="description" maxlength="64"></label>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une mauvaise route peut couper l'accès à des réseaux.</label>
-      <button class="small">Ajouter</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une mauvaise route peut couper l'accès à des réseaux.</label>
+        <button class="small">Ajouter</button>
+      </div>
     </form>
   </details>
 </section>

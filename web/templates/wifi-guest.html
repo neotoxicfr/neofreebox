@@ -37,9 +37,11 @@
           <select name="access_type"><option value="net_only">Internet seulement</option><option value="full">Réseau local + internet</option></select>
         </label>
       </div>
-      <label class="check"><input type="checkbox" name="confirm" value="1"> Accès complet : je comprends que l'invité verra les appareils de mon réseau local.</label>
-      <p class="hint">À cocher seulement avec « Réseau local + internet » : sans cette case, l'accès complet est refusé.</p>
-      <button>Créer l'accès</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1"> Accès complet : je comprends que l'invité verra les appareils de mon réseau local.</label>
+        <p class="hint">À cocher seulement avec « Réseau local + internet » : sans cette case, l'accès complet est refusé.</p>
+        <button>Créer l'accès</button>
+      </div>
     </form>
   </section>
 </div>
@@ -65,8 +67,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la clé {{or .Params.Description "sans description"}}</span></summary>
             <form method="post" action="/wifi-guest/keys/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les invités connectés avec cette clé seront déconnectés.</label>
-              <button class="small danger">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les invités connectés avec cette clé seront déconnectés.</label>
+                <button class="small danger">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>
