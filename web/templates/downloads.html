@@ -260,15 +260,19 @@
           <details class="inline">
             <summary class="ghost-btn danger">Retirer<span class="sr-only"> {{.Name}} de la liste</span></summary>
             <form method="post" action="/downloads/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera retirée de la liste (les fichiers sont conservés).</label>
-              <button class="small danger">Retirer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera retirée de la liste (les fichiers sont conservés).</label>
+                <button class="small danger">Retirer définitivement</button>
+              </div>
             </form>
           </details>
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer les fichiers<span class="sr-only"> de {{.Name}}</span></summary>
             <form method="post" action="/downloads/{{.ID}}/erase" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les fichiers téléchargés seront effacés définitivement.</label>
-              <button class="small danger">Supprimer avec les fichiers</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que les fichiers téléchargés seront effacés définitivement.</label>
+                <button class="small danger">Supprimer avec les fichiers</button>
+              </div>
             </form>
           </details>
         </div>
@@ -333,8 +337,10 @@
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{or .Title .URL}}</span></summary>
             <form method="post" action="/downloads/feeds/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le flux et ses éléments seront supprimés (les téléchargements sont conservés).</label>
-              <button class="small danger">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le flux et ses éléments seront supprimés (les téléchargements sont conservés).</label>
+                <button class="small danger">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>

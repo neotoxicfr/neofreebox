@@ -12,7 +12,7 @@
   <label>Confirmation<input name="confirm" type="password" autocomplete="new-password" required minlength="12"></label>
   <button>Changer</button>
 </form>
-<section class="card stack">
+<section class="card wide stack">
   <h2>Jetons d'API et MCP</h2>
   <p class="muted">Un jeton donne accès à l'API JSON (<code>/api/v1/ops</code>) et au serveur MCP (<code>/mcp</code>), en en-tête <code>Authorization: Bearer …</code>. Sans la case « lecture seule », il a la main sur toute la box. Changer le mot de passe révoque tous les jetons.</p>
   {{if .NewToken}}<div class="ok" role="status"><p>Jeton créé. Copie-le maintenant, il ne sera plus affiché&nbsp;:</p><p class="mono select">{{.NewToken}}</p></div>{{end}}

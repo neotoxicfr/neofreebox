@@ -32,9 +32,11 @@
   </section>
   <section class="card">
     <h2>Enregistrer</h2>
-    <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un planning actif coupe le Wi-Fi (ou met la box en veille) pendant les créneaux cochés.</label>
-    <p class="hint">Obligatoire si le planning est activé et qu'au moins un créneau est coché.</p>
-    <div class="actions"><button>Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends qu'un planning actif coupe le Wi-Fi (ou met la box en veille) pendant les créneaux cochés.</label>
+      <p class="hint">Obligatoire si le planning est activé et qu'au moins un créneau est coché.</p>
+      <button>Enregistrer</button>
+    </div>
   </section>
 </form>
 {{else}}<p class="empty">La box n'a pas renvoyé de planning exploitable.</p>{{end}}

@@ -16,8 +16,10 @@
         </select>
       </label>
       <p class="hint">{{.Whitelisted}} appareil(s) en liste blanche. Le WPS ne marche pas avec un filtre actif.</p>
-      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que les appareils refusés, le mien compris, seront déconnectés. (Pas besoin pour désactiver.)</label>
-      <button class="danger">Enregistrer le mode</button>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que les appareils refusés, le mien compris, seront déconnectés. (Pas besoin pour désactiver.)</label>
+        <button class="danger">Enregistrer le mode</button>
+      </div>
     </form>
   </section>
 
@@ -29,8 +31,10 @@
         <select name="type"><option value="whitelist">Blanche (autorisé)</option><option value="blacklist">Noire (refusé)</option></select>
       </label>
       <label>Commentaire<input name="comment" maxlength="64"></label>
-      {{if .Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif et peut déconnecter des appareils.</label>{{end}}
-      <button>Ajouter</button>
+      <div class="confirm">
+        {{if .Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif et peut déconnecter des appareils.</label>{{end}}
+        <button>Ajouter</button>
+      </div>
     </form>
   </section>
 </div>
@@ -56,15 +60,19 @@
                 <select name="type"><option value="whitelist"{{if .Allowed}} selected{{end}}>Blanche</option><option value="blacklist"{{if not .Allowed}} selected{{end}}>Noire</option></select>
               </label>
               <label>Commentaire<input name="comment" value="{{.Comment}}" maxlength="64"></label>
-              {{if $.Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif.</label>{{end}}
-              <button class="small">Enregistrer</button>
+              <div class="confirm">
+                {{if $.Active}}<label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le filtre est actif.</label>{{end}}
+                <button class="small">Enregistrer</button>
+              </div>
             </form>
           </details>
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> {{.MAC}}</span></summary>
             <form method="post" action="/wifi-filter/entries/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette adresse sera retirée du filtre{{if $.Active}}, qui est actif et peut changer qui se connecte{{end}}.</label>
-              <button class="small danger">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que cette adresse sera retirée du filtre{{if $.Active}}, qui est actif et peut changer qui se connecte{{end}}.</label>
+                <button class="small danger">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>

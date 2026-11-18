@@ -71,8 +71,10 @@
       </select>
     </label>
     <p class="hint">« Média direct » est le plus restrictif que la Freebox Pop accepte : elle refuse de désactiver complètement le SIP ALG. Garde « Média entre tous les appareils » si un téléphone IP ou un softphone ne fonctionne plus.</p>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages changent ce que la box laisse passer depuis et vers internet.</label>
-    <div class="actions"><button class="danger">Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ces réglages changent ce que la box laisse passer depuis et vers internet.</label>
+      <button class="danger">Enregistrer</button>
+    </div>
   </form>
 </section>
 
@@ -83,8 +85,10 @@
   <form method="post" action="/connection/remote" class="stack">
     <label class="check"><input type="checkbox" name="remote_access" value="1"{{if .Cfg.RemoteAccess}} checked{{end}}> Accès distant activé</label>
     <label>Port ({{.Cfg.RemoteMin}} à {{.Cfg.RemoteMax}})<input type="number" name="remote_access_port" value="{{.Cfg.RemotePort}}" min="1" max="65535" required></label>
-    <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'accès distant expose la box à internet (obligatoire pour l'activer).</label>
-    <div class="actions"><button class="danger">Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1"> Je comprends que l'accès distant expose la box à internet (obligatoire pour l'activer).</label>
+      <button class="danger">Enregistrer</button>
+    </div>
   </form>
 </section>
 
@@ -112,8 +116,10 @@
       </table>
     </div>
     {{end}}
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que couper IPv6 ou ses pare-feux peut couper ou exposer des appareils.</label>
-    <div class="actions"><button class="danger">Enregistrer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que couper IPv6 ou ses pare-feux peut couper ou exposer des appareils.</label>
+      <button class="danger">Enregistrer</button>
+    </div>
   </form>
 </section>
 {{end}}

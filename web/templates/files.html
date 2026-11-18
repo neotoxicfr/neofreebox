@@ -37,8 +37,10 @@
           <form method="post" action="/files/share" class="stack">
             <input type="hidden" name="p" value="{{$.P}}"><input type="hidden" name="target" value="{{.Path}}">
             <label>Durée en jours (0 = sans limite)<input type="number" name="days" min="0" value="7"></label>
-            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toute personne ayant le lien pourra télécharger ce fichier depuis internet.</label>
-            <button class="small">Créer le lien</button>
+            <div class="confirm">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que toute personne ayant le lien pourra télécharger ce fichier depuis internet.</label>
+              <button class="small">Créer le lien</button>
+            </div>
           </form>
         </details>
         {{end}}
@@ -69,8 +71,10 @@
       <label class="grow">Nom de l'archive<input name="archive" form="sel" placeholder="archive.zip"></label>
       <button class="ghost" form="sel" formaction="/files/archive" formnovalidate>Archiver</button>
     </div>
-    <label class="check"><input type="checkbox" name="confirm" value="1" form="sel" required> Je comprends que la suppression est définitive, et que « Remplacer » écrase les fichiers existants.</label>
-    <div class="row"><button class="danger" form="sel" formaction="/files/delete">Supprimer</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" form="sel" required> Je comprends que la suppression est définitive, et que « Remplacer » écrase les fichiers existants.</label>
+      <button class="danger" form="sel" formaction="/files/delete">Supprimer</button>
+    </div>
   </div>
 </section>
 {{end}}
@@ -97,8 +101,10 @@
       <td data-label="Progression">{{.Progress}} %</td>
       <td><details class="inline"><summary class="ghost-btn danger">Retirer<span class="sr-only"> la tâche {{.Type}} {{.ID}}</span></summary>
         <form method="post" action="/files/tasks/{{.ID}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera arrêtée si elle est en cours (les fichiers déjà traités restent).</label>
-          <button class="danger small">Retirer définitivement</button></form></details></td>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la tâche sera arrêtée si elle est en cours (les fichiers déjà traités restent).</label>
+            <button class="danger small">Retirer définitivement</button>
+          </div></form></details></td>
     </tr>
     {{end}}
     </tbody>
@@ -119,8 +125,10 @@
       <td data-label="Lien" class="mono">{{or .FullURL "accès distant désactivé"}}</td>
       <td><details class="inline"><summary class="ghost-btn danger">Supprimer<span class="sr-only"> le lien {{.Name}}</span></summary>
         <form method="post" action="/files/share/{{.Token}}/delete" class="stack"><input type="hidden" name="p" value="{{$.P}}">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le lien cessera de fonctionner pour tout le monde.</label>
-          <button class="danger small">Supprimer définitivement</button></form></details></td>
+          <div class="confirm">
+            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le lien cessera de fonctionner pour tout le monde.</label>
+            <button class="danger small">Supprimer définitivement</button>
+          </div></form></details></td>
     </tr>
     {{end}}
     </tbody>

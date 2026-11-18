@@ -20,8 +20,10 @@
         <details class="inline">
           <summary class="ghost-btn danger">Réinitialiser<span class="sr-only"> le Freeplug {{.ID}}</span></summary>
           <form method="post" action="/freeplug/{{.ID}}/reset" class="stack">
-            <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce Freeplug redémarre et que tout ce qui est branché derrière perd le réseau un instant.</label>
-            <button class="small danger">Réinitialiser</button>
+            <div class="confirm">
+              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que ce Freeplug redémarre et que tout ce qui est branché derrière perd le réseau un instant.</label>
+              <button class="small danger">Réinitialiser</button>
+            </div>
           </form>
         </details>
       </td>

@@ -4,7 +4,7 @@
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 <p class="muted">Un profil regroupe des appareils, avec un planning d'accès par semaine. Les appareils sans profil suivent le mode par défaut.</p>
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Mode par défaut</h2>
     <p>Appareils sans profil : <span class="badge {{if eq .Default "allowed"}}on{{else}}warn{{end}}">{{.DefaultLabel}}</span></p>
     <form method="post" action="/profiles/default" class="stack">
@@ -13,8 +13,10 @@
           {{range .Modes}}<option value="{{.}}"{{if eq . $.Default}} selected{{end}}>{{index $.Labels .}}</option>{{end}}
         </select>
       </label>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode autre que « Autorisé » coupe ou limite tous les appareils sans profil.</label>
-      <div><button class="danger">Enregistrer</button></div>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'un mode autre que « Autorisé » coupe ou limite tous les appareils sans profil.</label>
+        <button class="danger">Enregistrer</button>
+      </div>
     </form>
   </section>
   <section class="card">
@@ -55,8 +57,10 @@
         <option value="0">Jusqu'à reprise manuelle</option>
       </select>
     </label>
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les appareils de « {{$p.Name}} » perdent l'accès à internet.</label>
-    <div><button class="danger">Couper l'accès</button></div>
+    <div class="confirm">
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que tous les appareils de « {{$p.Name}} » perdent l'accès à internet.</label>
+      <button class="danger">Couper l'accès</button>
+    </div>
   </form>
   {{end}}
 
@@ -109,16 +113,20 @@
             <summary class="ghost-btn">Activer<span class="sr-only"> la règle {{.Name}}</span></summary>
             <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/toggle" class="stack">
               <input type="hidden" name="enable" value="1">
-              <label class="check"><input type="checkbox" name="confirm" value="1"{{if ne .Mode "allowed"}} required{{end}}> Je comprends que cette règle peut couper l'accès du profil.</label>
-              <div><button class="small">Activer</button></div>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1"{{if ne .Mode "allowed"}} required{{end}}> Je comprends que cette règle peut couper l'accès du profil.</label>
+                <button class="small">Activer</button>
+              </div>
             </form>
           </details>
           {{end}}
           <details class="inline">
             <summary class="ghost-btn danger">Supprimer<span class="sr-only"> la règle {{.Name}}</span></summary>
             <form method="post" action="/profiles/{{$p.ID}}/rules/{{.ID}}/delete" class="stack">
-              <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la règle « {{.Name}} » sera supprimée.</label>
-              <button class="danger small">Supprimer définitivement</button>
+              <div class="confirm">
+                <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que la règle « {{.Name}} » sera supprimée.</label>
+                <button class="danger small">Supprimer définitivement</button>
+              </div>
             </form>
           </details>
         </div>
@@ -151,8 +159,10 @@
         <label class="check"><input type="checkbox" name="day5" value="1" checked> Sam</label>
         <label class="check"><input type="checkbox" name="day6" value="1" checked> Dim</label>
       </div>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une règle « Bloqué » ou « Web seul » coupe ou limite l'accès du profil à ces heures.</label>
-      <div><button class="small">Ajouter</button></div>
+      <div class="confirm">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends qu'une règle « Bloqué » ou « Web seul » coupe ou limite l'accès du profil à ces heures.</label>
+        <button class="small">Ajouter</button>
+      </div>
     </form>
   </details>
 
@@ -168,8 +178,10 @@
     <details class="inline">
       <summary class="ghost-btn danger">Supprimer<span class="sr-only"> le profil {{$p.Name}}</span></summary>
       <form method="post" action="/profiles/{{$p.ID}}/delete" class="stack">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le profil « {{$p.Name}} » et son planning seront supprimés, et que ses appareils suivront le mode par défaut.</label>
-        <div><button class="danger small">Supprimer définitivement</button></div>
+        <div class="confirm">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> Je comprends que le profil « {{$p.Name}} » et son planning seront supprimés, et que ses appareils suivront le mode par défaut.</label>
+          <button class="danger small">Supprimer définitivement</button>
+        </div>
       </form>
     </details>
   </div>
