@@ -5,7 +5,7 @@
 <p class="muted">Couper le Wi-Fi ou changer le nom, la clé, la sécurité ou le canal peut te déconnecter de la box. Si tu y accèdes par Wi-Fi, passe par un câble.</p>
 
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Wi-Fi</h2>
     <p class="big"><span class="badge{{if .Cfg.Enabled}} on{{end}}">{{if .State.State}}{{.State.Label}}{{else if .Cfg.Enabled}}activé{{else}}désactivé{{end}}</span></p>
     {{if .Cfg.Enabled}}

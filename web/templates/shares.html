@@ -5,7 +5,7 @@
 <p class="muted">Les mots de passe ne sont jamais affichés : un champ laissé vide ne change rien.</p>
 <div class="grid">
 
-<section class="card">
+<section class="card wide">
   <h2>Partage Windows (Samba) <span class="badge{{if .Samba.FileShare}} on{{end}}">{{if .Samba.FileShare}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/samba" class="stack">
     <label class="check"><input type="checkbox" name="file_share" value="1"{{if .Samba.FileShare}} checked{{end}}> Partager les fichiers</label>
@@ -37,7 +37,7 @@
   {{end}}
 </section>
 
-<section class="card">
+<section class="card wide">
   <h2>Partage Mac (AFP) <span class="badge{{if .Afp.Enabled}} on{{end}}">{{if .Afp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/afp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Afp.Enabled}} checked{{end}}> Activer le partage Mac</label>
@@ -54,7 +54,7 @@
   </form>
 </section>
 
-<section class="card">
+<section class="card wide">
   <h2>FTP <span class="badge{{if .Ftp.Enabled}} on{{end}}">{{if .Ftp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/ftp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Ftp.Enabled}} checked{{end}}> Activer le serveur FTP</label>
@@ -82,7 +82,7 @@
   </form>
 </section>
 
-<section class="card">
+<section class="card wide">
   <h2>TFTP <span class="badge{{if .Tftp.Enabled}} on{{end}}">{{if .Tftp.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/tftp" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Tftp.Enabled}} checked{{end}}> Activer le serveur TFTP</label>
@@ -103,7 +103,7 @@
   </form>
 </section>
 
-<section class="card">
+<section class="card wide">
   <h2>AirMedia <span class="badge{{if .Air.Enabled}} on{{end}}">{{if .Air.Enabled}}en marche{{else}}arrêté{{end}}</span></h2>
   <form method="post" action="/shares/airmedia" class="stack">
     <label class="check"><input type="checkbox" name="enabled" value="1"{{if .Air.Enabled}} checked{{end}}> Récepteur AirMedia de la box</label>

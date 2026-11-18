@@ -4,7 +4,7 @@
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{else}}
 <p class="muted">Un profil regroupe des appareils, avec un planning d'accès par semaine. Les appareils sans profil suivent le mode par défaut.</p>
 <div class="grid">
-  <section class="card">
+  <section class="card wide">
     <h2>Mode par défaut</h2>
     <p>Appareils sans profil : <span class="badge {{if eq .Default "allowed"}}on{{else}}warn{{end}}">{{.DefaultLabel}}</span></p>
     <form method="post" action="/profiles/default" class="stack">
