@@ -43,7 +43,7 @@
 {{end}}{{end}}{{end}}
 <div class="content"{{with $line}} data-line="{{.}}"{{end}}>
 {{if .Demo}}<p class="demo" role="note">Démo : données fictives</p>{{end}}
-{{with .Flash}}<p class="{{if .Ok}}ok{{else}}error{{end}}" role="{{if .Ok}}status{{else}}alert{{end}}">{{.Text}}</p>{{end}}
+{{with .Flash}}<p class="{{if .Ok}}ok toast{{else}}error{{end}}" role="{{if .Ok}}status{{else}}alert{{end}}">{{.Text}}</p>{{end}}
 {{block "content" .}}{{end}}
 </div>
 </main>
