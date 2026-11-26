@@ -7,6 +7,8 @@ participant, tu acceptes le [code de conduite](CODE_OF_CONDUCT.md).
 
 - **Go 1.27+** (la version de `go.mod` fait foi ; la CI l'installe à partir de là)
 - **golangci-lint v2.15+**, compilé avec une version de Go ≥ celle de `go.mod`
+- **staticcheck 2026.2.2** : `go install honnef.co/go/tools/cmd/staticcheck@2026.2.2`
+- **osv-scanner v2.7.1** : `go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.1`
 - **Une chaîne C** (gcc/clang), uniquement pour `go test -race`
 - **lefthook** *(facultatif)* : installe les hooks git de `lefthook.yml`
 - **actionlint** *(facultatif)* : valide les modifications de workflows
@@ -59,8 +61,8 @@ Les pull requests visent `dev` et sont fusionnées en **squash** (seule méthode
 
 ## CI
 
-- `ci.yml` : build, tests avec détecteur de courses, golangci-lint, govulncheck et analyse
-  Trivy, sur chaque pull request.
+- `ci.yml` : build, tests avec détecteur de courses, staticcheck, golangci-lint, govulncheck,
+  osv-scanner et analyse Trivy, sur chaque pull request.
 - `docker-publish.yml` : sur un push vers `dev`, il lance `ci.yml` puis publie `:dev`
   (amd64). Sur un tag `v*`, il lance `ci.yml`, publie `X.Y.Z` et `latest` (amd64, arm64,
   arm/v7), puis crée la release GitHub. Rien n'est publié si la CI est rouge.
@@ -68,7 +70,7 @@ Les pull requests visent `dev` et sont fusionnées en **squash** (seule méthode
 ## Avant de pousser
 
 ```bash
-make check            # build, test-race, lint, vuln : ce que lance la CI
+make check            # build, test-race, vet, staticcheck, lint, vuln, osv : ce que lance la CI
 make test             # à la place de test-race, sans chaîne C
 ```
 

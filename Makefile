@@ -1,4 +1,4 @@
-.PHONY: dev build test test-race lint vuln check tidy docker
+.PHONY: dev build test test-race vet staticcheck lint vuln osv check tidy docker
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
@@ -16,14 +16,26 @@ test:
 test-race:
 	go test -race -timeout 120s ./...
 
+vet:
+	go vet ./...
+
+# Pinned: go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
+staticcheck:
+	staticcheck ./...
+
 lint:
 	golangci-lint run
 
 vuln:
 	govulncheck ./...
 
+# Known vulnerabilities in go.sum (OSV database).
+# Pinned: go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.1
+osv:
+	osv-scanner scan source -r .
+
 # What CI runs, before pushing.
-check: build test-race lint vuln
+check: build test-race vet staticcheck lint vuln osv
 
 tidy:
 	go mod tidy
