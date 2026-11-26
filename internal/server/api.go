@@ -40,28 +40,35 @@ type tokenStore struct {
 	mu      sync.Mutex
 	list    []apiToken
 	modTime time.Time // of tokens.json when last read or written
+	// stale is set when a revocation could not be written: the file still
+	// holds revoked tokens, so it is not read again until a write succeeds.
+	stale bool
 }
 
 func loadTokens(dir string) (*tokenStore, error) {
 	t := &tokenStore{path: filepath.Join(dir, "tokens.json")}
-	if err := t.reload(); err != nil {
+	if err := t.reload(true); err != nil {
 		return nil, err
 	}
 	return t, nil
 }
 
-// reload reads tokens.json when it changed since the last read or write: a
-// token created by `neofreebox token` while the server runs is seen without a
-// restart. t.mu is held (or t is not shared yet).
-func (t *tokenStore) reload() error {
+// reload reads tokens.json when it changed since the last read or write
+// (or always, with force): a token created by `neofreebox token` while the
+// server runs is seen without a restart. t.mu is held (or t is not shared).
+func (t *tokenStore) reload(force bool) error {
+	if t.stale {
+		return nil
+	}
 	fi, err := os.Stat(t.path)
 	if errors.Is(err, os.ErrNotExist) {
+		t.list, t.modTime = nil, time.Time{} // a deleted file holds no token
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("read tokens: %w", err)
 	}
-	if !fi.ModTime().After(t.modTime) && t.modTime != (time.Time{}) {
+	if !force && !t.modTime.IsZero() && !fi.ModTime().After(t.modTime) {
 		return nil
 	}
 	b, err := os.ReadFile(t.path)
@@ -74,6 +81,23 @@ func (t *tokenStore) reload() error {
 	}
 	t.list, t.modTime = list, fi.ModTime()
 	return nil
+}
+
+// update runs one read-modify-write of tokens.json under an exclusive file
+// lock shared with the `neofreebox token` command, so neither can write
+// back a token the other has just revoked. t.mu is held.
+func (t *tokenStore) update(change func([]apiToken) []apiToken) error {
+	unlock, err := lockFile(t.path + ".lock")
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if !t.stale {
+		if err := t.reload(true); err != nil {
+			return err
+		}
+	}
+	return t.save(change(append([]apiToken(nil), t.list...)))
 }
 
 // CreateToken adds an API token to the data directory and returns it, for
@@ -101,13 +125,12 @@ func (t *tokenStore) create(name string, readOnly bool) (string, error) {
 	_, _ = rand.Read(id)
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if err := t.reload(); err != nil { // keep tokens another process added
-		return "", err
-	}
-	list := append(append([]apiToken(nil), t.list...), apiToken{
-		ID: hex.EncodeToString(id), Name: name, Hash: hashToken(tok), Created: time.Now().UTC(), ReadOnly: readOnly,
+	err := t.update(func(list []apiToken) []apiToken {
+		return append(list, apiToken{
+			ID: hex.EncodeToString(id), Name: name, Hash: hashToken(tok), Created: time.Now().UTC(), ReadOnly: readOnly,
+		})
 	})
-	if err := t.save(list); err != nil {
+	if err != nil {
 		return "", err
 	}
 	return tok, nil
@@ -117,19 +140,19 @@ func (t *tokenStore) create(name string, readOnly bool) (string, error) {
 func (t *tokenStore) revoke(id string) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if err := t.reload(); err != nil {
-		return false, err
-	}
-	var list []apiToken
-	for _, x := range t.list {
-		if x.ID != id {
-			list = append(list, x)
+	found := false
+	err := t.update(func(list []apiToken) []apiToken {
+		kept := list[:0]
+		for _, x := range list {
+			if x.ID == id {
+				found = true
+				continue
+			}
+			kept = append(kept, x)
 		}
-	}
-	if len(list) == len(t.list) {
-		return false, nil
-	}
-	return true, t.save(list)
+		return kept
+	})
+	return found, err
 }
 
 // revokeAll removes every token, after a password change.
@@ -137,7 +160,11 @@ func (t *tokenStore) revokeAll() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.list = nil // invalid at once, even if the file cannot be rewritten
-	return t.save(nil)
+	if err := t.update(func([]apiToken) []apiToken { return nil }); err != nil {
+		t.list, t.stale = nil, true
+		return err
+	}
+	return nil
 }
 
 // save writes list and makes it current; t.mu is held.
@@ -153,7 +180,7 @@ func (t *tokenStore) save(list []apiToken) error {
 	if err := os.Rename(tmp, t.path); err != nil {
 		return fmt.Errorf("write tokens: %w", err)
 	}
-	t.list = list
+	t.list, t.stale = list, false
 	if fi, err := os.Stat(t.path); err == nil {
 		t.modTime = fi.ModTime()
 	}
@@ -163,7 +190,7 @@ func (t *tokenStore) save(list []apiToken) error {
 func (t *tokenStore) all() []apiToken {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	_ = t.reload()
+	_ = t.reload(false)
 	return append([]apiToken(nil), t.list...)
 }
 
@@ -175,7 +202,7 @@ func (t *tokenStore) lookup(tok string) (apiToken, bool) {
 	h := []byte(hashToken(tok))
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	_ = t.reload() // on a read error the tokens already known stay valid
+	_ = t.reload(false) // on a read error the tokens already known stay valid
 	var found apiToken
 	ok := false
 	for _, x := range t.list {

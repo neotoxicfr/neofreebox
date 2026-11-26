@@ -217,3 +217,41 @@ func TestSummaryAndExternalToken(t *testing.T) {
 		t.Fatalf("summary without token: %d", code)
 	}
 }
+
+// TestRevokedTokenStaysRevoked: the server and the `neofreebox token` command
+// each hold the token list; a revocation by one must survive a later write
+// by the other, and a deleted file holds no token.
+func TestRevokedTokenStaysRevoked(t *testing.T) {
+	dir := t.TempDir()
+	server, err := loadTokens(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := server.create("old", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli, err := loadTokens(dir) // loaded while "old" is still valid
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := server.all()[0].ID
+	if found, err := server.revoke(id); err != nil || !found {
+		t.Fatalf("revoke: %v %v", found, err)
+	}
+	if _, err := cli.create("new", true); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := server.lookup(old); ok {
+		t.Fatal("revoked token came back after another process wrote the file")
+	}
+	if _, ok := cli.lookup(old); ok {
+		t.Fatal("the other process kept the revoked token")
+	}
+	if err := os.Remove(filepath.Join(dir, "tokens.json")); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(server.all()); n != 0 {
+		t.Fatalf("%d tokens left after tokens.json was deleted", n)
+	}
+}
