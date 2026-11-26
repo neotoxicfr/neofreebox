@@ -74,9 +74,15 @@ l'envoi de fichiers (la box ne le propose qu'en WebSocket).
 
 Chaque opération de l'interface est aussi disponible en JSON et en outil MCP. Crée un
 jeton dans la page **Compte** de neofreebox (il n'est affiché qu'une fois ; seule son
-empreinte est conservée), puis :
+empreinte est conservée), ou, pour un autre service, sans qu'il s'affiche :
+`docker exec neofreebox /neofreebox token -name tableau -read-only -o /data/tableau.key`
+(le fichier est créé en 0600 ; le serveur en cours le prend en compte sans redémarrage). Puis :
 
 ```bash
+# Résumé pour un tableau de bord : connexion, débits (bit/s), uptime, appareils connectés,
+# Wi-Fi, appels non lus, températures. Que des chiffres et des états : ni adresse ni nom.
+curl -H "Authorization: Bearer nfb_xxx" https://box.example.com/api/v1/summary
+
 # Lister les opérations (nom, description, arguments)
 curl -H "Authorization: Bearer nfb_xxx" https://box.example.com/api/v1/ops
 

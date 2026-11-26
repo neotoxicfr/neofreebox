@@ -34,6 +34,8 @@ const usage = `usage: neofreebox <command>
   serve          run the web interface
   pair -o FILE   ask the box for an app token (confirm on the box), save it to FILE
   check          open a session with the token and print the box and its rights
+  token -name N -o FILE [-read-only]
+                 create an API/MCP token and write it to FILE (never printed)
   get PATH       print the JSON result of GET /api/v16/PATH (read-only, for debugging)
   healthcheck    exit 0 if the local server answers (for the container)
 
@@ -63,6 +65,8 @@ func main() {
 		err = pair(ctx, os.Args[2:])
 	case "check":
 		err = check(ctx)
+	case "token":
+		err = token(os.Args[2:])
 	case "get":
 		err = get(ctx, os.Args[2:])
 	case "healthcheck":
@@ -225,6 +229,32 @@ func serve(ctx context.Context) error {
 		return err // failed to listen: no shutdown to wait for
 	}
 	<-stopped
+	return nil
+}
+
+func token(args []string) error {
+	fs := flag.NewFlagSet("token", flag.ExitOnError)
+	name := fs.String("name", "", "token name, shown on the account page")
+	out := fs.String("o", "", "file the token is written to (must not exist)")
+	ro := fs.Bool("read-only", false, "only operations that change nothing and reveal no secret")
+	_ = fs.Parse(args)
+	if *name == "" || *out == "" {
+		return errors.New("token: -name and -o are required")
+	}
+	f, err := os.OpenFile(*out, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("token: %w", err)
+	}
+	defer f.Close()
+	tok, err := server.CreateToken(envOr("NEOFREEBOX_DATA_DIR", "./data"), *name, *ro)
+	if err != nil {
+		_ = os.Remove(*out)
+		return fmt.Errorf("token: %w", err)
+	}
+	if _, err := f.WriteString(tok + "\n"); err != nil {
+		return fmt.Errorf("token: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "Token %q created, written to %s.\n", *name, *out)
 	return nil
 }
 

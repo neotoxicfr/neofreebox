@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -175,5 +177,43 @@ func TestRevokeAllClearsMemoryOnWriteFailure(t *testing.T) {
 				t.Fatal("token still valid after a failed revocation")
 			}
 		})
+	}
+}
+
+func TestSummaryAndExternalToken(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(fakeBox{}, dir, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewTLSServer(s.Handler())
+	defer srv.Close()
+	// A token made by `neofreebox token` while the server runs is accepted.
+	tok, err := CreateToken(dir, "nehome", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, body := apiReq(t, srv.Client(), http.MethodGet, srv.URL+"/api/v1/summary", tok, "")
+	if code != http.StatusOK {
+		t.Fatalf("summary: %d %s", code, body)
+	}
+	var sum struct {
+		OK         bool `json:"ok"`
+		Connection struct {
+			Up          bool  `json:"up"`
+			RateDownBps int64 `json:"rate_down_bps"`
+		} `json:"connection"`
+		Box struct {
+			UptimeS int64 `json:"uptime_s"`
+		} `json:"box"`
+	}
+	if err := json.Unmarshal([]byte(body), &sum); err != nil || !sum.OK || !sum.Connection.Up || sum.Connection.RateDownBps != 10_000_000 || sum.Box.UptimeS != 90061 {
+		t.Fatalf("summary = %+v (%v)\n%s", sum, err, body)
+	}
+	if strings.Contains(body, "192.0.2.10") {
+		t.Fatal("summary leaks the public IP")
+	}
+	if code, _ := apiReq(t, srv.Client(), http.MethodGet, srv.URL+"/api/v1/summary", "", ""); code != http.StatusUnauthorized {
+		t.Fatalf("summary without token: %d", code)
 	}
 }

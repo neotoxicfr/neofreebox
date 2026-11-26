@@ -36,24 +36,55 @@ type apiToken struct {
 }
 
 type tokenStore struct {
-	path string
-	mu   sync.Mutex
-	list []apiToken
+	path    string
+	mu      sync.Mutex
+	list    []apiToken
+	modTime time.Time // of tokens.json when last read or written
 }
 
 func loadTokens(dir string) (*tokenStore, error) {
 	t := &tokenStore{path: filepath.Join(dir, "tokens.json")}
-	b, err := os.ReadFile(t.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return t, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read tokens: %w", err)
-	}
-	if err := json.Unmarshal(b, &t.list); err != nil {
-		return nil, fmt.Errorf("read tokens %s: %w", t.path, err)
+	if err := t.reload(); err != nil {
+		return nil, err
 	}
 	return t, nil
+}
+
+// reload reads tokens.json when it changed since the last read or write: a
+// token created by `neofreebox token` while the server runs is seen without a
+// restart. t.mu is held (or t is not shared yet).
+func (t *tokenStore) reload() error {
+	fi, err := os.Stat(t.path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read tokens: %w", err)
+	}
+	if !fi.ModTime().After(t.modTime) && t.modTime != (time.Time{}) {
+		return nil
+	}
+	b, err := os.ReadFile(t.path)
+	if err != nil {
+		return fmt.Errorf("read tokens: %w", err)
+	}
+	var list []apiToken
+	if err := json.Unmarshal(b, &list); err != nil {
+		return fmt.Errorf("read tokens %s: %w", t.path, err)
+	}
+	t.list, t.modTime = list, fi.ModTime()
+	return nil
+}
+
+// CreateToken adds an API token to the data directory and returns it, for
+// the `neofreebox token` command. A running server picks it up on its next
+// API call.
+func CreateToken(dataDir, name string, readOnly bool) (string, error) {
+	t, err := loadTokens(dataDir)
+	if err != nil {
+		return "", err
+	}
+	return t.create(name, readOnly)
 }
 
 func hashToken(tok string) string {
@@ -70,6 +101,9 @@ func (t *tokenStore) create(name string, readOnly bool) (string, error) {
 	_, _ = rand.Read(id)
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if err := t.reload(); err != nil { // keep tokens another process added
+		return "", err
+	}
 	list := append(append([]apiToken(nil), t.list...), apiToken{
 		ID: hex.EncodeToString(id), Name: name, Hash: hashToken(tok), Created: time.Now().UTC(), ReadOnly: readOnly,
 	})
@@ -83,6 +117,9 @@ func (t *tokenStore) create(name string, readOnly bool) (string, error) {
 func (t *tokenStore) revoke(id string) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if err := t.reload(); err != nil {
+		return false, err
+	}
 	var list []apiToken
 	for _, x := range t.list {
 		if x.ID != id {
@@ -117,12 +154,16 @@ func (t *tokenStore) save(list []apiToken) error {
 		return fmt.Errorf("write tokens: %w", err)
 	}
 	t.list = list
+	if fi, err := os.Stat(t.path); err == nil {
+		t.modTime = fi.ModTime()
+	}
 	return nil
 }
 
 func (t *tokenStore) all() []apiToken {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	_ = t.reload()
 	return append([]apiToken(nil), t.list...)
 }
 
@@ -134,6 +175,7 @@ func (t *tokenStore) lookup(tok string) (apiToken, bool) {
 	h := []byte(hashToken(tok))
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	_ = t.reload() // on a read error the tokens already known stay valid
 	var found apiToken
 	ok := false
 	for _, x := range t.list {
