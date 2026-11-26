@@ -49,21 +49,27 @@ func init() {
 	}})
 }
 
-func (s *Server) status(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+// statusData is what the home page and /api/v1/summary show. The optional
+// figures are nil when their endpoint failed or is not allowed.
+type statusData struct {
+	System systemInfo
+	Conn   connection
+	Rights []string
+	Active *int // connected devices
+	Total  *int // devices seen by the box
+	Unread *int // unread calls
+	WifiOn *bool
+}
+
+// collectStatus reads the box for the home page. system/ and connection/ are
+// required; the other figures are optional and get a short leash, so a slow
+// or forbidden one only drops its line.
+func (s *Server) collectStatus(ctx context.Context) (statusData, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	var (
-		sys   systemInfo
-		conn  connection
+		d     statusData
 		perms map[string]bool
-	)
-	g, gctx := errgroup.WithContext(ctx)
-	g.Go(func() error { return s.box.Get(gctx, "system/", &sys) })
-	g.Go(func() error { return s.box.Get(gctx, "connection/", &conn) })
-	g.Go(func() (err error) { perms, err = s.box.Permissions(gctx); return err })
-	// "En bref": figures from other pages. Each is optional (a missing right
-	// or a slow endpoint only drops its line) and runs beside the main calls.
-	var (
 		hosts []lanHost
 		calls []struct {
 			New bool `json:"new"`
@@ -71,13 +77,14 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		wifi struct {
 			Enabled bool `json:"enabled"`
 		}
-		haveHost = false
-		haveCall = false
-		haveWifi = false
+		haveHost, haveCall, haveWifi bool
 	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return s.box.Get(gctx, "system/", &d.System) })
+	g.Go(func() error { return s.box.Get(gctx, "connection/", &d.Conn) })
+	g.Go(func() (err error) { perms, err = s.box.Permissions(gctx); return err })
 	soft := func(ok *bool, path string, out any) {
 		g.Go(func() error {
-			// Optional figures get a short leash: a slow one must not hold the page.
 			octx, cancel := context.WithTimeout(gctx, 3*time.Second)
 			defer cancel()
 			*ok = s.box.Get(octx, path, out) == nil
@@ -87,22 +94,15 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	soft(&haveHost, "lan/browser/pub/", &hosts)
 	soft(&haveCall, "call/log/", &calls)
 	soft(&haveWifi, "wifi/config/", &wifi)
-	data := map[string]any{"Nav": "status"}
 	if err := g.Wait(); err != nil {
-		s.log.Error("status", "err", err)
-		data["Error"] = "La box ne répond pas : " + err.Error()
-		s.render(w, http.StatusBadGateway, "status", data)
-		return
+		return d, err
 	}
-	granted := make([]string, 0, len(perms))
 	for k, v := range perms {
 		if v {
-			granted = append(granted, k)
+			d.Rights = append(d.Rights, k)
 		}
 	}
-	sort.Strings(granted)
-	data["System"], data["Conn"], data["Rights"] = sys, conn, granted
-	brief := map[string]any{}
+	sort.Strings(d.Rights)
 	if haveHost {
 		active := 0
 		for _, h := range hosts {
@@ -110,7 +110,8 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 				active++
 			}
 		}
-		brief["HasHosts"], brief["Active"], brief["Total"] = true, active, len(hosts)
+		total := len(hosts)
+		d.Active, d.Total = &active, &total
 	}
 	if haveCall {
 		unread := 0
@@ -119,20 +120,90 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 				unread++
 			}
 		}
-		brief["HasCalls"], brief["Unread"] = true, unread
+		d.Unread = &unread
 	}
 	if haveWifi {
-		brief["Wifi"] = wifi.Enabled
-		brief["HasWifi"] = true
+		d.WifiOn = &wifi.Enabled
+	}
+	for i := range d.System.Fans { // same names as the graphs page: "Ventilateur 1"…
+		d.System.Fans[i].Name = fmt.Sprintf("Ventilateur %d", i+1)
+	}
+	return d, nil
+}
+
+func (s *Server) status(w http.ResponseWriter, r *http.Request) {
+	data := map[string]any{"Nav": "status"}
+	d, err := s.collectStatus(r.Context())
+	if err != nil {
+		s.log.Error("status", "err", err)
+		data["Error"] = "La box ne répond pas : " + err.Error()
+		s.render(w, http.StatusBadGateway, "status", data)
+		return
+	}
+	data["System"], data["Conn"], data["Rights"] = d.System, d.Conn, d.Rights
+	brief := map[string]any{}
+	if d.Active != nil {
+		brief["HasHosts"], brief["Active"], brief["Total"] = true, *d.Active, *d.Total
+	}
+	if d.Unread != nil {
+		brief["HasCalls"], brief["Unread"] = true, *d.Unread
+	}
+	if d.WifiOn != nil {
+		brief["HasWifi"], brief["Wifi"] = true, *d.WifiOn
 	}
 	data["Brief"] = brief
-	for i := range sys.Fans { // same names as the graphs page: "Ventilateur 1"…
-		sys.Fans[i].Name = fmt.Sprintf("Ventilateur %d", i+1)
-	}
-	data["Uptime"] = duration(time.Duration(sys.UptimeVal) * time.Second)
-	data["Down"], data["Up"] = bits(conn.RateDown*8), bits(conn.RateUp*8)
-	data["MaxDown"], data["MaxUp"] = bits(conn.BandwidthDown), bits(conn.BandwidthUp)
+	data["Uptime"] = duration(time.Duration(d.System.UptimeVal) * time.Second)
+	data["Down"], data["Up"] = bits(d.Conn.RateDown*8), bits(d.Conn.RateUp*8)
+	data["MaxDown"], data["MaxUp"] = bits(d.Conn.BandwidthDown), bits(d.Conn.BandwidthUp)
 	s.render(w, http.StatusOK, "status", data)
+}
+
+// apiSummary is a read-only digest for dashboards: figures and states only,
+// no address, MAC or device name. Any API token may read it.
+func (s *Server) apiSummary(w http.ResponseWriter, r *http.Request) {
+	d, err := s.collectStatus(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]any{"ok": false, "error": humanError(err)})
+		return
+	}
+	type temp struct {
+		Name    string `json:"name"`
+		Celsius int    `json:"celsius"`
+	}
+	out := map[string]any{
+		"ok": true,
+		"connection": map[string]any{
+			"up": d.Conn.State == "up", "state": d.Conn.State, "media": d.Conn.Media,
+			"rate_down_bps": d.Conn.RateDown * 8, "rate_up_bps": d.Conn.RateUp * 8,
+			"bandwidth_down_bps": d.Conn.BandwidthDown, "bandwidth_up_bps": d.Conn.BandwidthUp,
+		},
+		"box": map[string]any{
+			"model": d.System.ModelInfo.PrettyName, "firmware": d.System.FirmwareVersion,
+			"uptime_s": d.System.UptimeVal,
+		},
+	}
+	temps := []temp{}
+	maxTemp := 0
+	for _, t := range d.System.Sensors {
+		temps = append(temps, temp{t.Name, t.Value})
+		maxTemp = max(maxTemp, t.Value)
+	}
+	out["temperatures"], out["temperature_max_c"] = temps, maxTemp
+	fans := []int{}
+	for _, f := range d.System.Fans {
+		fans = append(fans, f.Value)
+	}
+	out["fans_rpm"] = fans
+	if d.Active != nil {
+		out["devices"] = map[string]int{"connected": *d.Active, "seen": *d.Total}
+	}
+	if d.WifiOn != nil {
+		out["wifi"] = map[string]bool{"enabled": *d.WifiOn}
+	}
+	if d.Unread != nil {
+		out["calls"] = map[string]int{"unread": *d.Unread}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // bits formats a rate in bit/s, in French units.

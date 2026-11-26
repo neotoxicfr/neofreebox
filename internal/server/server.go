@@ -156,6 +156,7 @@ func (s *Server) Handler() http.Handler {
 		}
 	}
 	mux.Handle("GET /api/v1/ops", s.bearer(http.HandlerFunc(s.apiList)))
+	mux.Handle("GET /api/v1/summary", s.bearer(http.HandlerFunc(s.apiSummary)))
 	mux.Handle("POST /api/v1/ops/{name}", s.bearer(http.HandlerFunc(s.apiCall)))
 	mux.Handle("/mcp", s.bearer(s.mcpHandler()))
 	return headers(http.NewCrossOriginProtection().Handler(mux))
